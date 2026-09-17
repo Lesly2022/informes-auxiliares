@@ -7,14 +7,123 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Modelo inicial.
-// Lo completaremos con las entidades reales del sistema antes de crear migraciones.
+enum Rol {
+  AUXILIAR
+  RESPONSABLE
+  ADMIN
+}
+
+enum EstadoInforme {
+  BORRADOR
+  GUARDADO
+  REVISADO
+}
+
 model Usuario {
+  id             Int      @id @default(autoincrement())
+  codigoSiss     String   @unique
+  carnet         String   @unique
+  nombreCompleto String
+  cargo          String
+  passwordHash   String?
+  rol            Rol      @default(AUXILIAR)
+  horarioInicio  String
+  horarioFin     String
+  activo         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  informes Informe[]
+}
+
+model Docente {
+  id             Int      @id @default(autoincrement())
+  nombreCompleto String
+  activo         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  actividades ActividadAcademica[]
+}
+
+model Materia {
   id        Int      @id @default(autoincrement())
+  codigo    String?
   nombre    String
-  cargo     String?
-  codigoSiss String  @unique
-  carnet    String
+  activo    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  actividades ActividadAcademica[]
+}
+
+model Informe {
+  id                  Int           @id @default(autoincrement())
+  usuarioId           Int
+  fecha               DateTime      @db.Date
+  horarioInicio       String
+  horarioFin          String
+  horarioModificado   Boolean       @default(false)
+  estado              EstadoInforme @default(GUARDADO)
+  estadoRecomendacion String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  usuario                Usuario                @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  actividadesAcademicas  ActividadAcademica[]
+  actividadesLaboratorio ActividadLaboratorio[]
+  incidencias            Incidencia[]
+  pendientes             Pendiente[]
+
+  @@unique([usuarioId, fecha])
+  @@index([fecha])
+}
+
+model ActividadAcademica {
+  id            Int      @id @default(autoincrement())
+  informeId     Int
+  docenteId     Int?
+  docenteOtro   String?
+  materiaId     Int?
+  materiaOtra   String?
+  sala          String
+  horarioInicio String
+  horarioFin    String
+  observaciones String?
+  createdAt     DateTime @default(now())
+
+  informe Informe  @relation(fields: [informeId], references: [id], onDelete: Cascade)
+  docente Docente? @relation(fields: [docenteId], references: [id])
+  materia Materia? @relation(fields: [materiaId], references: [id])
+}
+
+model ActividadLaboratorio {
+  id          Int      @id @default(autoincrement())
+  informeId   Int
+  descripcion String
+  orden       Int
+  createdAt   DateTime @default(now())
+
+  informe Informe @relation(fields: [informeId], references: [id], onDelete: Cascade)
+}
+
+model Incidencia {
+  id          Int      @id @default(autoincrement())
+  informeId   Int
+  equipo      String
+  descripcion String
+  accion      String
+  createdAt   DateTime @default(now())
+
+  informe Informe @relation(fields: [informeId], references: [id], onDelete: Cascade)
+}
+
+model Pendiente {
+  id          Int      @id @default(autoincrement())
+  informeId   Int
+  descripcion String
+  orden       Int
+  createdAt   DateTime @default(now())
+
+  informe Informe @relation(fields: [informeId], references: [id], onDelete: Cascade)
 }
