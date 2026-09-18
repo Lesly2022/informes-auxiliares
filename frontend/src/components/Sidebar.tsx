@@ -54,14 +54,22 @@ const SIDEBAR_BG = '#1a3d7c';
 export default function Sidebar({ active, onNavigate, onLogout }: SidebarProps) {
   return (
     <aside
-      style={{ backgroundColor: SIDEBAR_BG, minHeight: '100vh', width: 220, flexShrink: 0 }}
-      className="flex flex-col"
-    >
+  style={{
+    backgroundColor: SIDEBAR_BG,
+    height: '100vh',
+    width: 220,
+    flexShrink: 0,
+    position: 'sticky',
+    top: 0,
+    alignSelf: 'flex-start',
+  }}
+  className="flex flex-col"
+>
       {/* Brand */}
       <div className="px-5 py-6 border-b" style={{ borderColor: 'rgba(255,255,255,0.10)' }}>
         <div className="flex items-center gap-2.5">
           <div
-            className="rounded-lg flex items-center justify-center flex-shrink-0"
+            className="rounded-lg flex items-center justify-center shrink-0"
             style={{ backgroundColor: 'rgba(255,255,255,0.14)', width: 36, height: 36 }}
           >
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">

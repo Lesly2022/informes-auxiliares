@@ -134,7 +134,22 @@ function SectionHeader({ num, title, badge, badgeType }: { num: string; title: s
 export default function InformeFormScreen({ onNavigate, onLogout, editReportId }: Props) {
   const isEdit = !!editReportId;
 
-  const [fecha, setFecha] = useState('');
+  const obtenerFechaBolivia = () => {
+  const partes = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/La_Paz',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+
+  const year = partes.find((p) => p.type === 'year')?.value;
+  const month = partes.find((p) => p.type === 'month')?.value;
+  const day = partes.find((p) => p.type === 'day')?.value;
+
+  return `${year}-${month}-${day}`;
+};
+
+const [fecha, setFecha] = useState(obtenerFechaBolivia);
   const [horarioCambiado, setHorarioCambiado] = useState(false);
   const [horarioOtro, setHorarioOtro] = useState('');
   const [actividadesAcademicas, setActividadesAcademicas] = useState<ActividadAcademica[]>([]);
