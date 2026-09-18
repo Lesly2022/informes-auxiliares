@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react';
-import type { ActividadAcademica, Incidencia, Informe, Screen } from '../types';
+import type { ActividadAcademica, Incidencia, Screen } from '../types';
 import { USUARIO, SALAS, DOCENTES, MATERIAS, HORARIOS_ACADEMICOS, HORARIOS_TURNO_ALTERNATIVOS, HORARIO_TURNO_DEFAULT } from '../data';
 import Sidebar from '../components/Sidebar';
+import {
+  crearInforme,
+  actualizarInforme,
+  obtenerInformePorId,
+  type CrearInformePayload,
+} from '../services/informes.service';
 
 interface Props {
-  onNavigate: (s: Screen) => void;
+  onNavigate: (s: Screen, id?: string) => void;
   onLogout: () => void;
-  onSave: (informe: Informe) => void;
-  editReport?: Informe | null;
+  editReportId?: string | null;
 }
 
 const B_DARK = '#1a3d7c';
@@ -105,7 +110,7 @@ function SectionHeader({ num, title, badge, badgeType }: { num: string; title: s
   return (
     <div className="flex items-center gap-2.5 mb-4">
       <div
-        className="rounded-lg flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
+        className="rounded-lg flex items-center justify-center text-white font-bold text-xs shrink-0"
         style={{ width: 28, height: 28, background: `linear-gradient(135deg, ${B_DARK} 0%, ${B_MID} 100%)`, fontFamily: 'DM Sans, sans-serif' }}
       >
         {num}
@@ -126,8 +131,8 @@ function SectionHeader({ num, title, badge, badgeType }: { num: string; title: s
   );
 }
 
-export default function InformeFormScreen({ onNavigate, onLogout, onSave, editReport }: Props) {
-  const isEdit = !!editReport;
+export default function InformeFormScreen({ onNavigate, onLogout, editReportId }: Props) {
+  const isEdit = !!editReportId;
 
   const [fecha, setFecha] = useState('');
   const [horarioCambiado, setHorarioCambiado] = useState(false);
@@ -140,32 +145,167 @@ export default function InformeFormScreen({ onNavigate, onLogout, onSave, editRe
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showConfirm, setShowConfirm] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+  const [errorGuardado, setErrorGuardado] = useState('');
+  const [nombreUsuario, setNombreUsuario] = useState(USUARIO.nombre);
+  const [cargandoEdicion, setCargandoEdicion] = useState(false);
 
   const horarioEfectivo = horarioCambiado ? horarioOtro : HORARIO_TURNO_DEFAULT;
 
-  useEffect(() => {
-    if (editReport) {
-      setFecha(editReport.fecha);
-      if (editReport.horario !== HORARIO_TURNO_DEFAULT) {
+useEffect(() => {
+  if (!editReportId) {
+    return;
+  }
+
+  let activo = true;
+
+  const cargarInforme = async () => {
+    try {
+      setCargandoEdicion(true);
+      setErrorGuardado('');
+
+      const informe = await obtenerInformePorId(editReportId);
+
+      if (!activo) return;
+
+      // Datos generales
+      setNombreUsuario(informe.usuario.nombreCompleto);
+      setFecha(informe.fecha);
+
+      const horarioInforme =
+        `${informe.horarioInicio} - ${informe.horarioFin}`;
+
+      if (
+        informe.horarioModificado ||
+        horarioInforme !== HORARIO_TURNO_DEFAULT
+      ) {
         setHorarioCambiado(true);
-        setHorarioOtro(editReport.horario);
+        setHorarioOtro(horarioInforme);
       } else {
         setHorarioCambiado(false);
         setHorarioOtro('');
       }
-      setActividadesAcademicas(editReport.actividadesAcademicas);
-      const labs = editReport.actividadesLaboratorio.length >= 4
-        ? editReport.actividadesLaboratorio
-        : [...editReport.actividadesLaboratorio, ...Array(4 - editReport.actividadesLaboratorio.length).fill('')];
-      setActividadesLab(labs);
-      setIncidencias(editReport.incidencias);
-      const pends = editReport.pendientes.length >= 3
-        ? editReport.pendientes
-        : [...editReport.pendientes, ...Array(3 - editReport.pendientes.length).fill('')];
-      setPendientes(pends);
-      setEstadoRecomendacion(editReport.estadoRecomendacion);
+
+      setActividadesAcademicas(
+        informe.actividadesAcademicas.map((act) => {
+          const nombreDocente =
+            act.docente?.nombreCompleto ||
+            act.docente?.nombre ||
+            act.docenteOtro ||
+            '';
+
+          const nombreMateria =
+            act.materia?.nombre ||
+            act.materiaOtra ||
+            '';
+
+          const docenteEstaEnLista =
+            DOCENTES.includes(nombreDocente);
+
+          const materiaEstaEnLista =
+            MATERIAS.includes(nombreMateria);
+
+          return {
+            id: String(act.id),
+            sala: act.sala || '',
+
+            docente: docenteEstaEnLista
+              ? nombreDocente
+              : nombreDocente
+                ? 'Otro'
+                : '',
+
+            docenteOtro: docenteEstaEnLista
+              ? ''
+              : nombreDocente,
+
+            materia: materiaEstaEnLista
+              ? nombreMateria
+              : nombreMateria
+                ? 'Otra'
+                : '',
+
+            materiaOtra: materiaEstaEnLista
+              ? ''
+              : nombreMateria,
+
+            horario:
+              act.horarioInicio && act.horarioFin
+                ? `${act.horarioInicio} - ${act.horarioFin}`
+                : '',
+
+            observaciones: act.observaciones || '',
+          };
+        })
+      );
+
+      const actividadesLaboratorio =
+        informe.actividadesLaboratorio.map(
+          (actividad) => actividad.descripcion
+        );
+
+      setActividadesLab(
+        actividadesLaboratorio.length >= 4
+          ? actividadesLaboratorio
+          : [
+              ...actividadesLaboratorio,
+              ...Array(
+                4 - actividadesLaboratorio.length
+              ).fill(''),
+            ]
+      );
+
+      setIncidencias(
+        informe.incidencias.map((incidencia) => ({
+          id: String(incidencia.id),
+          equipo: incidencia.equipo,
+          descripcion: incidencia.descripcion,
+          accion: incidencia.accion,
+        }))
+      );
+
+      const pendientesInforme =
+        informe.pendientes.map(
+          (pendiente) => pendiente.descripcion
+        );
+
+      setPendientes(
+        pendientesInforme.length >= 3
+          ? pendientesInforme
+          : [
+              ...pendientesInforme,
+              ...Array(
+                3 - pendientesInforme.length
+              ).fill(''),
+            ]
+      );
+
+      setEstadoRecomendacion(
+        informe.estadoRecomendacion || ''
+      );
+    } catch (error) {
+      if (!activo) return;
+
+      if (error instanceof Error) {
+        setErrorGuardado(error.message);
+      } else {
+        setErrorGuardado(
+          'No se pudo cargar el informe para editar.'
+        );
+      }
+    } finally {
+      if (activo) {
+        setCargandoEdicion(false);
+      }
     }
-  }, [editReport]);
+  };
+
+  cargarInforme();
+
+  return () => {
+    activo = false;
+  };
+}, [editReportId]);
 
   const validate = (): boolean => {
     const e: Record<string, string> = {};
@@ -184,22 +324,67 @@ export default function InformeFormScreen({ onNavigate, onLogout, onSave, editRe
     setShowConfirm(true);
   };
 
-  const handleConfirm = () => {
-    const informe: Informe = {
-      id: editReport?.id ?? newId(),
-      fecha,
-      horario: horarioEfectivo,
-      actividadesAcademicas,
-      actividadesLaboratorio: actividadesLab.filter(a => a.trim()),
-      incidencias: incidencias.filter(i => i.equipo.trim() || i.descripcion.trim()),
-      pendientes: pendientes.filter(p => p.trim()),
-      estadoRecomendacion,
-      estado: 'Guardado',
-    };
-    onSave(informe);
-    setShowConfirm(false);
-    setSaved(true);
-    setTimeout(() => { setSaved(false); onNavigate('informes'); }, 1800);
+  const handleConfirm = async () => {
+    try {
+      setGuardando(true);
+      setErrorGuardado('');
+
+      const [horarioInicio, horarioFin] = horarioEfectivo
+        .split('-')
+        .map(h => h.trim());
+
+      if (!horarioInicio || !horarioFin) {
+        throw new Error('El horario debe tener el formato HH:MM - HH:MM');
+      }
+
+      const payload: CrearInformePayload = {
+        horarioInicio,
+        horarioFin,
+        horarioModificado: horarioCambiado,
+        actividadesAcademicas: actividadesAcademicas.map(act => ({
+          sala: act.sala,
+          docenteId: null,
+          docenteOtro: act.docente === 'Otro' ? act.docenteOtro.trim() : act.docente.trim(),
+          materiaId: null,
+          materiaOtra: act.materia === 'Otra' ? act.materiaOtra.trim() : act.materia.trim(),
+          horarioInicio: act.horario.split('-')[0]?.trim() || '',
+          horarioFin: act.horario.split('-')[1]?.trim() || '',
+          observaciones: act.observaciones.trim() || null,
+        })),
+        actividadesLaboratorio: actividadesLab.map(a => a.trim()).filter(Boolean),
+        incidencias: incidencias
+          .filter(i => i.equipo.trim() || i.descripcion.trim() || i.accion.trim())
+          .map(i => ({
+            equipo: i.equipo.trim(),
+            descripcion: i.descripcion.trim(),
+            accion: i.accion.trim(),
+          })),
+        pendientes: pendientes.map(p => p.trim()).filter(Boolean),
+        estadoRecomendacion: estadoRecomendacion.trim() || null,
+      };
+
+      if (isEdit && editReportId) {
+        await actualizarInforme(editReportId, payload);
+      } else {
+        await crearInforme(payload);
+      }
+
+      setShowConfirm(false);
+      setSaved(true);
+      setTimeout(() => {
+        setSaved(false);
+        onNavigate('informes');
+      }, 1800);
+    } catch (error) {
+      setShowConfirm(false);
+      if (error instanceof Error) {
+        setErrorGuardado(error.message);
+      } else {
+        setErrorGuardado('Ocurrió un error al guardar el informe.');
+      }
+    } finally {
+      setGuardando(false);
+    }
   };
 
   const addActividad = () => setActividadesAcademicas(prev => [...prev, newActividad()]);
@@ -312,6 +497,20 @@ export default function InformeFormScreen({ onNavigate, onLogout, onSave, editRe
         {/* Form */}
         <div className="flex-1 px-6 py-6 max-w-4xl w-full mx-auto" style={{ paddingBottom: 100 }}>
           {/* Error summary */}
+          {errorGuardado && (
+            <div
+              className="rounded-xl px-5 py-4 mb-5 flex items-start gap-3"
+              style={{ backgroundColor: '#fdf0ee', border: '1px solid #f5c6bc' }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c0392b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <p className="text-sm font-medium" style={{ color: '#c0392b' }}>{errorGuardado}</p>
+            </div>
+          )}
+
           {Object.keys(errors).length > 0 && (
             <div
               id="error-anchor"
@@ -341,7 +540,7 @@ export default function InformeFormScreen({ onNavigate, onLogout, onSave, editRe
                 <label className="text-xs font-medium uppercase tracking-wide" style={{ color: '#8fa0b8', fontSize: 11 }}>Nombre completo</label>
                 <input
                   type="text"
-                  value={USUARIO.nombre}
+                  value={nombreUsuario}
                   readOnly
                   style={{ ...inputBase, backgroundColor: '#f1f4f9', color: '#5a6a82', cursor: 'not-allowed', borderColor: '#e2e8f0' }}
                 />
@@ -398,7 +597,7 @@ export default function InformeFormScreen({ onNavigate, onLogout, onSave, editRe
                 <label className="flex items-center gap-2 cursor-pointer select-none">
                   <div
                     onClick={() => { setHorarioCambiado(prev => !prev); setErrors(prev => ({ ...prev, horario: '' })); }}
-                    className="rounded-md flex items-center justify-center flex-shrink-0"
+                    className="rounded-md flex items-center justify-center shrink-0"
                     style={{
                       width: 18, height: 18,
                       backgroundColor: horarioCambiado ? B_MID : 'white',
@@ -559,7 +758,7 @@ export default function InformeFormScreen({ onNavigate, onLogout, onSave, editRe
               {actividadesLab.map((act, i) => (
                 <div key={i} className="flex items-start gap-2">
                   <span
-                    className="rounded-lg flex items-center justify-center font-semibold text-xs flex-shrink-0 mt-2"
+                    className="rounded-lg flex items-center justify-center font-semibold text-xs shrink-0 mt-2"
                     style={{ width: 26, height: 26, backgroundColor: B_LIGHT, color: B_DARK }}
                   >
                     {i + 1}
@@ -576,7 +775,7 @@ export default function InformeFormScreen({ onNavigate, onLogout, onSave, editRe
                   {actividadesLab.length > 1 && (
                     <button
                       onClick={() => removeActividadLab(i)}
-                      className="mt-2 p-1.5 rounded-lg flex-shrink-0"
+                      className="mt-2 p-1.5 rounded-lg shrink-0"
                       style={{ color: '#c0392b', backgroundColor: '#fdf0ee' }}
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#fde0dc'; }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#fdf0ee'; }}
@@ -645,7 +844,7 @@ export default function InformeFormScreen({ onNavigate, onLogout, onSave, editRe
               {pendientes.map((p, i) => (
                 <div key={i} className="flex items-start gap-2">
                   <span
-                    className="rounded-lg flex items-center justify-center font-semibold text-xs flex-shrink-0 mt-2"
+                    className="rounded-lg flex items-center justify-center font-semibold text-xs shrink-0 mt-2"
                     style={{ width: 26, height: 26, backgroundColor: '#f1f4f9', color: '#5a6a82' }}
                   >
                     {i + 1}
@@ -662,7 +861,7 @@ export default function InformeFormScreen({ onNavigate, onLogout, onSave, editRe
                   {pendientes.length > 1 && (
                     <button
                       onClick={() => removePendiente(i)}
-                      className="mt-2 p-1.5 rounded-lg flex-shrink-0"
+                      className="mt-2 p-1.5 rounded-lg shrink-0"
                       style={{ color: '#c0392b', backgroundColor: '#fdf0ee' }}
                       onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#fde0dc'; }}
                       onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = '#fdf0ee'; }}
@@ -716,6 +915,7 @@ export default function InformeFormScreen({ onNavigate, onLogout, onSave, editRe
           </button>
           <button
             onClick={handleGuardar}
+            disabled={guardando}
             className="px-6 py-2.5 rounded-lg text-sm font-semibold text-white flex items-center gap-2"
             style={{ background: `linear-gradient(135deg, ${B_DARK} 0%, ${B_MID} 100%)`, fontFamily: 'DM Sans, sans-serif', boxShadow: '0 2px 8px rgba(37,84,168,0.28)' }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '0.9'; }}
@@ -724,7 +924,11 @@ export default function InformeFormScreen({ onNavigate, onLogout, onSave, editRe
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
             </svg>
-            {isEdit ? 'Guardar cambios' : 'Guardar informe'}
+            {guardando
+              ? 'Guardando...'
+              : isEdit
+                ? 'Guardar cambios'
+                : 'Guardar informe'}
           </button>
         </div>
       </main>

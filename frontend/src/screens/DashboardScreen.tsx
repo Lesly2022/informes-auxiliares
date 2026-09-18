@@ -105,7 +105,7 @@ export default function DashboardScreen({ onNavigate, onLogout }: Props) {
           >
             <div className="flex items-start gap-4">
               <div
-                className="rounded-xl flex items-center justify-center text-white font-bold text-base flex-shrink-0"
+                className="rounded-xl flex items-center justify-center text-white font-bold text-base shrink-0"
                 style={{ width: 52, height: 52, background: `linear-gradient(135deg, ${B_DARK} 0%, ${B_MID} 100%)`, fontFamily: 'DM Sans, sans-serif' }}
               >
                 {initials}
