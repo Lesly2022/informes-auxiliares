@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Screen } from '../types';
+import { login } from '../services/auth.service';
 
 interface Props {
   onLogin: (s: Screen) => void;
@@ -15,20 +16,34 @@ export default function LoginScreen({ onLogin }: Props) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    if (!codigo.trim() || !carnet.trim()) {
-      setError('Por favor, completa todos los campos.');
-      return;
-    }
-    if (codigo.trim() === '202001823' && carnet.trim() === '8018935') {
-      setLoading(true);
-      setTimeout(() => onLogin('dashboard'), 800);
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError('');
+
+  if (!codigo.trim() || !carnet.trim()) {
+    setError('Por favor, completa todos los campos.');
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const data = await login(codigo.trim(), carnet.trim());
+
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('usuario', JSON.stringify(data.usuario));
+
+    onLogin('dashboard');
+  } catch (error) {
+    if (error instanceof Error) {
+      setError(error.message);
     } else {
-      setError('Código SISS o número de carnet incorrecto. Verifica tus datos.');
+      setError('No se pudo iniciar sesión.');
     }
-  };
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4" style={{ backgroundColor: '#f1f4f9' }}>
