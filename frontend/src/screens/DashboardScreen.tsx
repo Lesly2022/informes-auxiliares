@@ -1,6 +1,7 @@
+import { useEffect, useState } from 'react';
 import type { Screen } from '../types';
-import { USUARIO } from '../data';
 import Sidebar from '../components/Sidebar';
+import { obtenerPerfil, type Perfil } from '../services/perfil.service';
 
 interface Props {
   onNavigate: (s: Screen) => void;
@@ -12,7 +13,47 @@ const B_MID = '#2554a8';
 const B_LIGHT = '#e8eef8';
 
 export default function DashboardScreen({ onNavigate, onLogout }: Props) {
-  const initials = USUARIO.nombre.split(' ').slice(0, 2).map(w => w[0]).join('');
+  const [perfil, setPerfil] = useState<Perfil | null>(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const cargarPerfil = async () => {
+      try {
+        const data = await obtenerPerfil();
+        setPerfil(data);
+      } catch (error) {
+        if (error instanceof Error) {
+          setError(error.message);
+        } else {
+          setError('No se pudo cargar el perfil.');
+        }
+      }
+    };
+
+    cargarPerfil();
+  }, []);
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p>{error}</p>
+      </div>
+    );
+  }
+
+  if (!perfil) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p>Cargando información...</p>
+      </div>
+    );
+  }
+
+  const initials = perfil.nombreCompleto
+    .split(' ')
+    .slice(0, 2)
+    .map(w => w[0])
+    .join('');
 
   return (
     <div className="flex" style={{ minHeight: '100vh' }}>
@@ -40,8 +81,8 @@ export default function DashboardScreen({ onNavigate, onLogout }: Props) {
               {initials}
             </div>
             <div className="hidden sm:block">
-              <p className="text-sm font-medium" style={{ color: '#111827' }}>{USUARIO.nombre}</p>
-              <p className="text-xs" style={{ color: '#5a6a82' }}>{USUARIO.cargo}</p>
+              <p className="text-sm font-medium" style={{ color: '#111827' }}>{perfil.nombreCompleto}</p>
+              <p className="text-xs" style={{ color: '#5a6a82' }}>{perfil.nombreCompleto}</p>
             </div>
           </div>
         </header>
@@ -50,7 +91,7 @@ export default function DashboardScreen({ onNavigate, onLogout }: Props) {
         <div className="flex-1 px-8 py-8 max-w-5xl w-full mx-auto">
           <div className="mb-7">
             <h2 className="text-2xl font-bold" style={{ fontFamily: 'DM Sans, sans-serif', color: '#111827' }}>
-              Bienvenido, {USUARIO.nombre.split(' ')[0]}
+              Bienvenido, {perfil.nombreCompleto.split(' ')[0]}
             </h2>
             <p className="text-sm mt-1" style={{ color: '#5a6a82' }}>
               Aquí puedes registrar y consultar tus informes diarios de laboratorio.
@@ -83,10 +124,13 @@ export default function DashboardScreen({ onNavigate, onLogout }: Props) {
                 </div>
                 <div className="grid grid-cols-2 gap-x-8 gap-y-3 sm:grid-cols-4">
                   {[
-                    { label: 'Nombre completo', value: USUARIO.nombre },
-                    { label: 'Cargo', value: USUARIO.cargo },
-                    { label: 'Código SISS', value: USUARIO.codigoSiss },
-                    { label: 'N° de Carnet', value: USUARIO.carnet },
+                    { label: 'Nombre completo', value: perfil.nombreCompleto },
+                    { label: 'Cargo', value: perfil.cargo },
+                    { label: 'Código SISS', value: perfil.codigoSiss },
+                    {
+                      label: 'Horario',
+                      value: `${perfil.horarioInicio} - ${perfil.horarioFin}`,
+                    },
                   ].map(({ label, value }) => (
                     <div key={label}>
                       <p style={{ color: '#8fa0b8', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, marginBottom: 2 }}>
