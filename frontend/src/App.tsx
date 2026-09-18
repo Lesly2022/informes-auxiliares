@@ -19,9 +19,12 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    setScreen('login');
-    setSelectedId(null);
-  };
+  localStorage.removeItem('token');
+  localStorage.removeItem('usuario');
+
+  setScreen('login');
+  setSelectedId(null);
+};
 
   const handleSave = (informe: Informe) => {
     setReports(prev => {
