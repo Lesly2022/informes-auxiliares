@@ -35,4 +35,28 @@ export interface Usuario {
   carnet: string;
 }
 
-export type Screen = 'login' | 'dashboard' | 'elaborar' | 'informes' | 'visualizar' | 'editar';
+export type Screen =
+  | 'login'
+
+  // AUXILIAR
+  | 'dashboard'
+  | 'elaborar'
+  | 'informes'
+  | 'visualizar'
+  | 'editar'
+
+  // ADMINISTRADOR
+  | 'admin-dashboard'
+  | 'admin-informes'
+  | 'admin-visualizar'
+  | 'admin-auxiliares'
+  | 'admin-docentes'
+  | 'admin-salas';
+
+export type AdminScreen =
+  | 'admin-dashboard'
+  | 'admin-informes'
+  | 'admin-visualizar'
+  | 'admin-auxiliares'
+  | 'admin-docentes'
+  | 'admin-salas';

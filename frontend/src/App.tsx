@@ -1,10 +1,18 @@
 import { useState } from 'react';
-import type { Screen } from './types';
+import type { AdminScreen, Screen } from './types';
+
 import LoginScreen from './screens/LoginScreen';
 import DashboardScreen from './screens/DashboardScreen';
 import InformeFormScreen from './screens/InformeFormScreen';
 import InformesPasadosScreen from './screens/InformesPasadosScreen';
 import VisualizarInformeScreen from './screens/VisualizarInformeScreen';
+
+import AdminDashboardScreen from './screens/admin/AdminDashboardScreen';
+import AdminInformesScreen from './screens/admin/AdminInformesScreen';
+import AdminAuxiliaresScreen from './screens/admin/AdminAuxiliaresScreen';
+import AdminDocentesScreen from './screens/admin/AdminDocentesScreen';
+import AdminSalasScreen from './screens/admin/AdminSalasScreen';
+import AdminVisualizarInformeScreen from './screens/admin/AdminVisualizarInformeScreen';
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('login');
@@ -20,6 +28,10 @@ export default function App() {
     window.scrollTo(0, 0);
   };
 
+  const navigateAdmin = (screen: AdminScreen, id?: string) => {
+    navigate(screen, id);
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('usuario');
@@ -29,13 +41,15 @@ export default function App() {
   };
 
   switch (screen) {
+    /*
+     * LOGIN
+     */
     case 'login':
-      return (
-        <LoginScreen
-          onLogin={navigate}
-        />
-      );
+      return <LoginScreen onLogin={navigate} />;
 
+    /*
+     * AUXILIAR
+     */
     case 'dashboard':
       return (
         <DashboardScreen
@@ -93,6 +107,67 @@ export default function App() {
         <VisualizarInformeScreen
           informeId={selectedId}
           onNavigate={navigate}
+          onLogout={handleLogout}
+        />
+      );
+
+    /*
+     * ADMINISTRADOR
+     */
+    case 'admin-dashboard':
+      return (
+        <AdminDashboardScreen
+          onNavigate={navigateAdmin}
+          onLogout={handleLogout}
+        />
+      );
+
+    case 'admin-informes':
+      return (
+        <AdminInformesScreen
+          onNavigate={navigateAdmin}
+          onLogout={handleLogout}
+        />
+      );
+
+    case 'admin-visualizar':
+      if (!selectedId) {
+        return (
+          <AdminInformesScreen
+            onNavigate={navigateAdmin}
+            onLogout={handleLogout}
+          />
+        );
+      }
+
+      return (
+        <AdminVisualizarInformeScreen
+          informeId={selectedId}
+          onNavigate={navigateAdmin}
+          onLogout={handleLogout}
+        />
+      );
+
+    case 'admin-auxiliares':
+      return (
+        <AdminAuxiliaresScreen
+          onNavigate={navigateAdmin}
+          onLogout={handleLogout}
+        />
+      );
+
+    case 'admin-docentes':
+      return (
+        <AdminDocentesScreen
+          onNavigate={navigateAdmin}
+          onLogout={handleLogout}
+        />
+      );
+
+    case 'admin-salas':
+      return (
+        <AdminSalasScreen
+          onNavigate={navigateAdmin}
           onLogout={handleLogout}
         />
       );
