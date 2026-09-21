@@ -3,7 +3,8 @@ import jwt from 'jsonwebtoken';
 
 interface JwtPayload {
   usuarioId: number;
-  codigoSiss: string;
+  codigoSiss?: string;
+  username?: string;
   rol: string;
 }
 
@@ -46,4 +47,24 @@ export const verificarToken = (
       mensaje: 'Token inválido o expirado',
     });
   }
+};
+
+export const verificarAdmin = (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  if (!req.usuario) {
+    return res.status(401).json({
+      mensaje: 'Usuario no autenticado',
+    });
+  }
+
+  if (req.usuario.rol !== 'ADMIN') {
+    return res.status(403).json({
+      mensaje: 'Acceso denegado',
+    });
+  }
+
+  next();
 };

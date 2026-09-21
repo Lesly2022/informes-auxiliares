@@ -21,11 +21,12 @@ enum EstadoInforme {
 
 model Usuario {
   id             Int      @id @default(autoincrement())
-  codigoSiss     String   @unique
-  carnet         String   @unique
+  codigoSiss     String?  @unique
+  carnet         String?  @unique
+  username       String?  @unique
   nombreCompleto String
   cargo          String
-  passwordHash   String?
+  passwordHash   String
   rol            Rol      @default(AUXILIAR)
   horarioInicio  String
   horarioFin     String
@@ -126,4 +127,12 @@ model Pendiente {
   createdAt   DateTime @default(now())
 
   informe Informe @relation(fields: [informeId], references: [id], onDelete: Cascade)
+}
+
+model Sala {
+  id        Int      @id @default(autoincrement())
+  nombre    String   @unique
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

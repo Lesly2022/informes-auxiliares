@@ -8,6 +8,8 @@ import materiasRoutes from './routes/materias.routes';
 import authRoutes from './routes/auth.routes';
 import perfilRoutes from './routes/perfil.routes';
 import informesRoutes from './routes/informes.routes';
+import adminRoutes from './routes/admin.routes';
+import salasRoutes from './routes/salas.routes';
 
 dotenv.config();
 const app = express();
@@ -30,6 +32,8 @@ app.use('/api/materias', materiasRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/perfil', perfilRoutes);
 app.use('/api/informes', informesRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/salas', salasRoutes);
 
 
 app.listen(PORT, () => {

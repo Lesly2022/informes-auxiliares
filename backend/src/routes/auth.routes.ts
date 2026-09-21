@@ -7,8 +7,59 @@ const router = Router();
 
 router.post('/login', async (req, res) => {
   try {
-    const { codigoSiss, carnet } = req.body;
+    const { codigoSiss, carnet, username, password } = req.body;
 
+    // LOGIN DE ADMIN
+    if (username && password) {
+      const usuario = await prisma.usuario.findUnique({
+        where: {
+          username,
+        },
+      });
+
+      if (!usuario || !usuario.activo || usuario.rol !== 'ADMIN') {
+        return res.status(401).json({
+          mensaje: 'Credenciales incorrectas',
+        });
+      }
+
+      const passwordCorrecta = await bcrypt.compare(
+        password,
+        usuario.passwordHash
+      );
+
+      if (!passwordCorrecta) {
+        return res.status(401).json({
+          mensaje: 'Credenciales incorrectas',
+        });
+      }
+
+      const token = jwt.sign(
+        {
+          usuarioId: usuario.id,
+          username: usuario.username,
+          rol: usuario.rol,
+        },
+        process.env.JWT_SECRET as string,
+        {
+          expiresIn: '8h',
+        }
+      );
+
+      return res.json({
+        mensaje: 'Inicio de sesión exitoso',
+        token,
+        usuario: {
+          id: usuario.id,
+          nombreCompleto: usuario.nombreCompleto,
+          cargo: usuario.cargo,
+          rol: usuario.rol,
+          activo: usuario.activo,
+        },
+      });
+    }
+
+    // LOGIN DE AUXILIAR
     if (!codigoSiss || !carnet) {
       return res.status(400).json({
         mensaje: 'Código SISS y carnet son obligatorios',
@@ -21,18 +72,21 @@ router.post('/login', async (req, res) => {
       },
     });
 
-    if (!usuario || !usuario.activo) {
+    if (!usuario || !usuario.activo || usuario.rol !== 'AUXILIAR') {
       return res.status(401).json({
         mensaje: 'Credenciales incorrectas',
       });
     }
 
-    const carnetCorrecto = usuario.carnet === carnet;
+    const carnetCorrecto = await bcrypt.compare(
+    carnet,
+    usuario.passwordHash
+    );
 
     if (!carnetCorrecto) {
-      return res.status(401).json({
+    return res.status(401).json({
         mensaje: 'Credenciales incorrectas',
-      });
+    });
     }
 
     const token = jwt.sign(
@@ -58,6 +112,7 @@ router.post('/login', async (req, res) => {
         rol: usuario.rol,
         horarioInicio: usuario.horarioInicio,
         horarioFin: usuario.horarioFin,
+        activo: usuario.activo,
       },
     });
   } catch (error) {
