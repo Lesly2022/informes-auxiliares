@@ -2,11 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import AdminSidebar from '../../components/AdminSidebar';
 import type { AdminScreen } from '../../types';
 import {
-  obtenerAdminSalas,
-  crearAdminSala,
-  actualizarAdminSala,
-  cambiarEstadoAdminSala,
-  type AdminSala,
+  obtenerAdminMaterias,
+  crearAdminMateria,
+  actualizarAdminMateria,
+  cambiarEstadoAdminMateria,
+  type AdminMateria,
 } from '../../services/admin.service';
 
 interface Props {
@@ -18,14 +18,16 @@ const B_DARK = '#1a3d7c';
 const B_MID = '#2554a8';
 const B_LIGHT = '#e8eef8';
 
-export default function AdminSalasScreen({
+export default function AdminMateriasScreen({
   onNavigate,
   onLogout,
 }: Props) {
-  const [salas, setSalas] = useState<AdminSala[]>([]);
+  const [materias, setMaterias] = useState<AdminMateria[]>([]);
   const [busqueda, setBusqueda] = useState('');
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [editandoId, setEditandoId] = useState<number | null>(null);
+
+  const [codigo, setCodigo] = useState('');
   const [nombre, setNombre] = useState('');
 
   const [mensaje, setMensaje] = useState('');
@@ -37,21 +39,21 @@ export default function AdminSalasScreen({
     useState<number | null>(null);
 
   // ==========================================
-  // CARGAR SALAS
+  // CARGAR MATERIAS
   // ==========================================
 
-  const cargarSalas = async () => {
+  const cargarMaterias = async () => {
     try {
       setCargando(true);
       setMensaje('');
 
-      const data = await obtenerAdminSalas();
-      setSalas(data);
+      const data = await obtenerAdminMaterias();
+      setMaterias(data);
     } catch (error) {
       setMensaje(
         error instanceof Error
           ? error.message
-          : 'No se pudieron cargar las salas'
+          : 'No se pudieron cargar las materias'
       );
     } finally {
       setCargando(false);
@@ -59,33 +61,40 @@ export default function AdminSalasScreen({
   };
 
   useEffect(() => {
-    cargarSalas();
+    cargarMaterias();
   }, []);
 
   // ==========================================
   // FILTRAR
   // ==========================================
 
-  const salasFiltradas = useMemo(() => {
+  const materiasFiltradas = useMemo(() => {
     const texto = busqueda.trim().toLowerCase();
 
     if (!texto) {
-      return salas;
+      return materias;
     }
 
-    return salas.filter((sala) =>
-      sala.nombre.toLowerCase().includes(texto)
-    );
-  }, [salas, busqueda]);
+    return materias.filter((materia) => {
+      const codigoMateria = materia.codigo?.toLowerCase() || '';
+      const nombreMateria = materia.nombre.toLowerCase();
 
-  const activas = salas.filter((sala) => sala.activo).length;
-  const inactivas = salas.length - activas;
+      return (
+        codigoMateria.includes(texto) ||
+        nombreMateria.includes(texto)
+      );
+    });
+  }, [materias, busqueda]);
+
+  const activas = materias.filter((materia) => materia.activo).length;
+  const inactivas = materias.length - activas;
 
   // ==========================================
   // MODAL
   // ==========================================
 
   const abrirNueva = () => {
+    setCodigo('');
     setNombre('');
     setEditandoId(null);
     setMensaje('');
@@ -93,9 +102,10 @@ export default function AdminSalasScreen({
     setMostrarFormulario(true);
   };
 
-  const abrirEdicion = (sala: AdminSala) => {
-    setNombre(sala.nombre);
-    setEditandoId(sala.id);
+  const abrirEdicion = (materia: AdminMateria) => {
+    setCodigo(materia.codigo || '');
+    setNombre(materia.nombre);
+    setEditandoId(materia.id);
     setMensaje('');
     setMensajeExito('');
     setMostrarFormulario(true);
@@ -106,6 +116,7 @@ export default function AdminSalasScreen({
       return;
     }
 
+    setCodigo('');
     setNombre('');
     setEditandoId(null);
     setMensaje('');
@@ -116,71 +127,93 @@ export default function AdminSalasScreen({
   // CREAR / EDITAR
   // ==========================================
 
-  const guardarSala = async (e: React.FormEvent) => {
+  const guardarMateria = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const codigoLimpio = codigo.trim();
     const nombreLimpio = nombre.trim();
 
     setMensaje('');
     setMensajeExito('');
 
     if (!nombreLimpio) {
-      setMensaje('Ingresa el nombre de la sala.');
+      setMensaje('Ingresa el nombre de la materia.');
       return;
     }
 
-    const repetida = salas.some(
-      (sala) =>
-        sala.nombre.trim().toLowerCase() ===
+    const nombreRepetido = materias.some(
+      (materia) =>
+        materia.nombre.trim().toLowerCase() ===
           nombreLimpio.toLowerCase() &&
-        sala.id !== editandoId
+        materia.id !== editandoId
     );
 
-    if (repetida) {
-      setMensaje('Esta sala ya se encuentra registrada.');
+    if (nombreRepetido) {
+      setMensaje('Esta materia ya se encuentra registrada.');
       return;
+    }
+
+    if (codigoLimpio) {
+      const codigoRepetido = materias.some(
+        (materia) =>
+          materia.codigo?.trim().toLowerCase() ===
+            codigoLimpio.toLowerCase() &&
+          materia.id !== editandoId
+      );
+
+      if (codigoRepetido) {
+        setMensaje(
+          'El código ingresado ya pertenece a otra materia.'
+        );
+        return;
+      }
     }
 
     try {
       setGuardando(true);
 
       if (editandoId !== null) {
-        const actualizada = await actualizarAdminSala(
+        const actualizada = await actualizarAdminMateria(
           editandoId,
+          codigoLimpio,
           nombreLimpio
         );
 
-        setSalas((actuales) =>
+        setMaterias((actuales) =>
           actuales
-            .map((sala) =>
-              sala.id === actualizada.id ? actualizada : sala
+            .map((materia) =>
+              materia.id === actualizada.id
+                ? actualizada
+                : materia
             )
-            .sort((a, b) =>
-              a.nombre.localeCompare(b.nombre)
-            )
+            .sort((a, b) => a.nombre.localeCompare(b.nombre))
         );
 
-        setMensajeExito('Sala actualizada correctamente.');
+        setMensajeExito('Materia actualizada correctamente.');
       } else {
-        const nueva = await crearAdminSala(nombreLimpio);
+        const nueva = await crearAdminMateria(
+          codigoLimpio,
+          nombreLimpio
+        );
 
-        setSalas((actuales) =>
+        setMaterias((actuales) =>
           [...actuales, nueva].sort((a, b) =>
             a.nombre.localeCompare(b.nombre)
           )
         );
 
-        setMensajeExito('Sala registrada correctamente.');
+        setMensajeExito('Materia registrada correctamente.');
       }
 
       setMostrarFormulario(false);
       setEditandoId(null);
+      setCodigo('');
       setNombre('');
     } catch (error) {
       setMensaje(
         error instanceof Error
           ? error.message
-          : 'No se pudo guardar la sala'
+          : 'No se pudo guardar la materia'
       );
     } finally {
       setGuardando(false);
@@ -191,20 +224,20 @@ export default function AdminSalasScreen({
   // ACTIVAR / DESACTIVAR
   // ==========================================
 
-  const cambiarEstado = async (sala: AdminSala) => {
-    const nuevoEstado = !sala.activo;
+  const cambiarEstado = async (materia: AdminMateria) => {
+    const nuevoEstado = !materia.activo;
 
     try {
-      setCambiandoEstadoId(sala.id);
+      setCambiandoEstadoId(materia.id);
       setMensaje('');
       setMensajeExito('');
 
-      const actualizada = await cambiarEstadoAdminSala(
-        sala.id,
+      const actualizada = await cambiarEstadoAdminMateria(
+        materia.id,
         nuevoEstado
       );
 
-      setSalas((actuales) =>
+      setMaterias((actuales) =>
         actuales.map((item) =>
           item.id === actualizada.id ? actualizada : item
         )
@@ -212,14 +245,14 @@ export default function AdminSalasScreen({
 
       setMensajeExito(
         nuevoEstado
-          ? 'Sala activada correctamente.'
-          : 'Sala desactivada correctamente.'
+          ? 'Materia activada correctamente.'
+          : 'Materia desactivada correctamente.'
       );
     } catch (error) {
       setMensaje(
         error instanceof Error
           ? error.message
-          : 'No se pudo cambiar el estado de la sala'
+          : 'No se pudo cambiar el estado de la materia'
       );
     } finally {
       setCambiandoEstadoId(null);
@@ -241,7 +274,7 @@ export default function AdminSalasScreen({
   return (
     <div className="flex" style={{ minHeight: '100vh' }}>
       <AdminSidebar
-        active="admin-salas"
+        active="admin-materias"
         onNavigate={onNavigate}
         onLogout={onLogout}
       />
@@ -266,14 +299,14 @@ export default function AdminSalasScreen({
                 color: '#111827',
               }}
             >
-              Gestión de salas
+              Gestión de materias
             </h1>
 
             <p
               className="text-xs mt-0.5"
               style={{ color: '#5a6a82' }}
             >
-              Administra las salas y laboratorios disponibles.
+              Administra las materias disponibles para los informes.
             </p>
           </div>
 
@@ -287,7 +320,7 @@ export default function AdminSalasScreen({
             }}
           >
             <span style={{ fontSize: 18, lineHeight: 1 }}>+</span>
-            Nueva sala
+            Nueva materia
           </button>
         </header>
 
@@ -322,7 +355,10 @@ export default function AdminSalasScreen({
 
           {/* RESUMEN */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
-            <Resumen titulo="Total de salas" valor={salas.length} />
+            <Resumen
+              titulo="Total de materias"
+              valor={materias.length}
+            />
             <Resumen titulo="Activas" valor={activas} />
             <Resumen titulo="Inactivas" valor={inactivas} />
           </div>
@@ -340,14 +376,14 @@ export default function AdminSalasScreen({
               className="text-xs font-medium block mb-1"
               style={{ color: '#5a6a82' }}
             >
-              Buscar sala
+              Buscar materia
             </label>
 
             <input
               type="text"
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Buscar por nombre..."
+              placeholder="Buscar por código o nombre..."
               style={{
                 ...inputBase,
                 maxWidth: 450,
@@ -372,7 +408,7 @@ export default function AdminSalasScreen({
                 className="text-sm font-semibold"
                 style={{ color: '#111827' }}
               >
-                Salas registradas
+                Materias registradas
               </h2>
 
               <p
@@ -380,11 +416,11 @@ export default function AdminSalasScreen({
                 style={{ color: '#8fa0b8' }}
               >
                 {cargando
-                  ? 'Cargando salas...'
-                  : `${salasFiltradas.length} ${
-                      salasFiltradas.length === 1
-                        ? 'sala encontrada'
-                        : 'salas encontradas'
+                  ? 'Cargando materias...'
+                  : `${materiasFiltradas.length} ${
+                      materiasFiltradas.length === 1
+                        ? 'materia encontrada'
+                        : 'materias encontradas'
                     }`}
               </p>
             </div>
@@ -406,7 +442,7 @@ export default function AdminSalasScreen({
                   className="text-sm"
                   style={{ color: '#8fa0b8' }}
                 >
-                  Cargando salas...
+                  Cargando materias...
                 </p>
 
                 <style>
@@ -424,36 +460,51 @@ export default function AdminSalasScreen({
                 <table className="w-full">
                   <thead>
                     <tr>
-                      {['Sala', 'Estado', 'Acciones'].map(
-                        (columna) => (
-                          <th
-                            key={columna}
-                            className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide"
-                            style={{
-                              color: '#8fa0b8',
-                              backgroundColor: '#fafbfd',
-                              fontSize: 11,
-                              borderBottom: '1px solid #e2e8f0',
-                            }}
-                          >
-                            {columna}
-                          </th>
-                        )
-                      )}
+                      {[
+                        'Código',
+                        'Materia',
+                        'Estado',
+                        'Acciones',
+                      ].map((columna) => (
+                        <th
+                          key={columna}
+                          className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide"
+                          style={{
+                            color: '#8fa0b8',
+                            backgroundColor: '#fafbfd',
+                            fontSize: 11,
+                            borderBottom: '1px solid #e2e8f0',
+                          }}
+                        >
+                          {columna}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
 
                   <tbody>
-                    {salasFiltradas.map((sala, index) => (
+                    {materiasFiltradas.map((materia, index) => (
                       <tr
-                        key={sala.id}
+                        key={materia.id}
                         style={{
                           borderBottom:
-                            index < salasFiltradas.length - 1
+                            index < materiasFiltradas.length - 1
                               ? '1px solid #f0f4fb'
                               : 'none',
                         }}
                       >
+                        <td className="px-5 py-4">
+                          <span
+                            className="text-xs font-semibold px-2.5 py-1 rounded-md"
+                            style={{
+                              backgroundColor: '#f1f5f9',
+                              color: '#475569',
+                            }}
+                          >
+                            {materia.codigo || 'Sin código'}
+                          </span>
+                        </td>
+
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-3">
                             <div
@@ -475,11 +526,8 @@ export default function AdminSalasScreen({
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
                               >
-                                <path d="M3 21h18" />
-                                <path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16" />
-                                <path d="M9 9h6" />
-                                <path d="M9 13h6" />
-                                <path d="M9 17h2" />
+                                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
                               </svg>
                             </div>
 
@@ -488,14 +536,14 @@ export default function AdminSalasScreen({
                                 className="text-sm font-medium"
                                 style={{ color: '#111827' }}
                               >
-                                {sala.nombre}
+                                {materia.nombre}
                               </div>
 
                               <div
                                 className="text-xs mt-0.5"
                                 style={{ color: '#8fa0b8' }}
                               >
-                                Sala / Laboratorio
+                                Materia académica
                               </div>
                             </div>
                           </div>
@@ -505,10 +553,10 @@ export default function AdminSalasScreen({
                           <span
                             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
                             style={{
-                              backgroundColor: sala.activo
+                              backgroundColor: materia.activo
                                 ? '#f0fdf4'
                                 : '#fef2f2',
-                              color: sala.activo
+                              color: materia.activo
                                 ? '#166534'
                                 : '#b91c1c',
                             }}
@@ -518,13 +566,15 @@ export default function AdminSalasScreen({
                               style={{
                                 width: 6,
                                 height: 6,
-                                backgroundColor: sala.activo
+                                backgroundColor: materia.activo
                                   ? '#16a34a'
                                   : '#dc2626',
                               }}
                             />
 
-                            {sala.activo ? 'Activa' : 'Inactiva'}
+                            {materia.activo
+                              ? 'Activa'
+                              : 'Inactiva'}
                           </span>
                         </td>
 
@@ -532,9 +582,11 @@ export default function AdminSalasScreen({
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
-                              onClick={() => abrirEdicion(sala)}
+                              onClick={() =>
+                                abrirEdicion(materia)
+                              }
                               disabled={
-                                cambiandoEstadoId === sala.id
+                                cambiandoEstadoId === materia.id
                               }
                               className="px-3 py-1.5 rounded-lg text-xs font-medium"
                               style={{
@@ -542,7 +594,7 @@ export default function AdminSalasScreen({
                                 color: B_DARK,
                                 border: '1.5px solid #d1ddf5',
                                 opacity:
-                                  cambiandoEstadoId === sala.id
+                                  cambiandoEstadoId === materia.id
                                     ? 0.6
                                     : 1,
                               }}
@@ -552,30 +604,32 @@ export default function AdminSalasScreen({
 
                             <button
                               type="button"
-                              onClick={() => cambiarEstado(sala)}
+                              onClick={() =>
+                                cambiarEstado(materia)
+                              }
                               disabled={
-                                cambiandoEstadoId === sala.id
+                                cambiandoEstadoId === materia.id
                               }
                               className="px-3 py-1.5 rounded-lg text-xs font-medium"
                               style={{
-                                backgroundColor: sala.activo
+                                backgroundColor: materia.activo
                                   ? '#fef2f2'
                                   : '#f0fdf4',
-                                color: sala.activo
+                                color: materia.activo
                                   ? '#b91c1c'
                                   : '#166534',
-                                border: sala.activo
+                                border: materia.activo
                                   ? '1.5px solid #fecaca'
                                   : '1.5px solid #bbf7d0',
                                 opacity:
-                                  cambiandoEstadoId === sala.id
+                                  cambiandoEstadoId === materia.id
                                     ? 0.6
                                     : 1,
                               }}
                             >
-                              {cambiandoEstadoId === sala.id
+                              {cambiandoEstadoId === materia.id
                                 ? 'Procesando...'
-                                : sala.activo
+                                : materia.activo
                                   ? 'Desactivar'
                                   : 'Activar'}
                             </button>
@@ -584,14 +638,14 @@ export default function AdminSalasScreen({
                       </tr>
                     ))}
 
-                    {salasFiltradas.length === 0 && (
+                    {materiasFiltradas.length === 0 && (
                       <tr>
                         <td
-                          colSpan={3}
+                          colSpan={4}
                           className="text-center px-5 py-14 text-sm"
                           style={{ color: '#8fa0b8' }}
                         >
-                          No se encontraron salas.
+                          No se encontraron materias.
                         </td>
                       </tr>
                     )}
@@ -629,15 +683,15 @@ export default function AdminSalasScreen({
                   style={{ color: '#111827' }}
                 >
                   {editandoId !== null
-                    ? 'Editar sala'
-                    : 'Registrar nueva sala'}
+                    ? 'Editar materia'
+                    : 'Registrar nueva materia'}
                 </h2>
 
                 <p
                   className="text-xs mt-1"
                   style={{ color: '#8fa0b8' }}
                 >
-                  Ingresa el nombre de la sala o laboratorio.
+                  Ingresa los datos de la materia.
                 </p>
               </div>
 
@@ -652,20 +706,36 @@ export default function AdminSalasScreen({
               </button>
             </div>
 
-            <form onSubmit={guardarSala}>
+            <form onSubmit={guardarMateria}>
               <div className="p-6">
                 <label
                   className="text-xs font-medium block mb-1.5"
                   style={{ color: '#5a6a82' }}
                 >
-                  Nombre de la sala *
+                  Código de la materia
+                </label>
+
+                <input
+                  type="text"
+                  value={codigo}
+                  onChange={(e) => setCodigo(e.target.value)}
+                  placeholder="Ej. SIS-101"
+                  style={inputBase}
+                  disabled={guardando}
+                />
+
+                <label
+                  className="text-xs font-medium block mb-1.5 mt-4"
+                  style={{ color: '#5a6a82' }}
+                >
+                  Nombre de la materia *
                 </label>
 
                 <input
                   type="text"
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
-                  placeholder="Ej. Laboratorio 4"
+                  placeholder="Ej. Base de Datos I"
                   style={inputBase}
                   disabled={guardando}
                 />
@@ -693,7 +763,7 @@ export default function AdminSalasScreen({
                     className="text-xs"
                     style={{ color: '#6b778c' }}
                   >
-                    Las salas activas estarán disponibles
+                    Las materias activas estarán disponibles
                     posteriormente en el formulario de informes
                     utilizado por los auxiliares.
                   </p>
@@ -735,7 +805,7 @@ export default function AdminSalasScreen({
                     ? 'Guardando...'
                     : editandoId !== null
                       ? 'Guardar cambios'
-                      : 'Registrar sala'}
+                      : 'Registrar materia'}
                 </button>
               </div>
             </form>

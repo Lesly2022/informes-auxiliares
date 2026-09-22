@@ -1,113 +1,22 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import AdminSidebar from '../../components/AdminSidebar';
 import type { AdminScreen } from '../../types';
+import {
+  obtenerAdminAuxiliares,
+  obtenerAdminInformes,
+  formatearFechaAdmin,
+  type AdminAuxiliar,
+  type AdminInformeResumen,
+  type AdminFiltrosInformes,
+} from '../../services/admin.service';
 
 interface Props {
   onNavigate: (screen: AdminScreen, id?: string) => void;
   onLogout: () => void;
 }
 
-interface InformeAdmin {
-  id: number;
-  fecha: string;
-  auxiliarId: number;
-  auxiliar: string;
-  horarioInicio: string;
-  horarioFin: string;
-  actividades: number;
-  estado: 'GUARDADO';
-}
-
 const B_DARK = '#1a3d7c';
-const B_MID = '#2554a8';
 const B_LIGHT = '#e8eef8';
-
-/*
- * DATOS TEMPORALES DEL FRONTEND
- * Después serán reemplazados por información proveniente del backend.
- */
-const informesIniciales: InformeAdmin[] = [
-  {
-    id: 1,
-    fecha: '2026-09-20',
-    auxiliarId: 1,
-    auxiliar: 'José Alejandro Montaño Laura',
-    horarioInicio: '09:00',
-    horarioFin: '13:00',
-    actividades: 4,
-    estado: 'GUARDADO',
-  },
-  {
-    id: 2,
-    fecha: '2026-09-20',
-    auxiliarId: 2,
-    auxiliar: 'María Fernanda López',
-    horarioInicio: '13:00',
-    horarioFin: '17:00',
-    actividades: 3,
-    estado: 'GUARDADO',
-  },
-  {
-    id: 3,
-    fecha: '2026-09-19',
-    auxiliarId: 3,
-    auxiliar: 'Carlos Mendoza Rojas',
-    horarioInicio: '08:00',
-    horarioFin: '12:00',
-    actividades: 5,
-    estado: 'GUARDADO',
-  },
-  {
-    id: 4,
-    fecha: '2026-09-19',
-    auxiliarId: 4,
-    auxiliar: 'Andrea Vargas Flores',
-    horarioInicio: '14:00',
-    horarioFin: '18:00',
-    actividades: 2,
-    estado: 'GUARDADO',
-  },
-  {
-    id: 5,
-    fecha: '2026-09-18',
-    auxiliarId: 5,
-    auxiliar: 'Luis Fernando Rocha',
-    horarioInicio: '09:00',
-    horarioFin: '13:00',
-    actividades: 4,
-    estado: 'GUARDADO',
-  },
-  {
-    id: 6,
-    fecha: '2026-08-28',
-    auxiliarId: 1,
-    auxiliar: 'José Alejandro Montaño Laura',
-    horarioInicio: '09:00',
-    horarioFin: '13:00',
-    actividades: 3,
-    estado: 'GUARDADO',
-  },
-  {
-    id: 7,
-    fecha: '2026-08-25',
-    auxiliarId: 2,
-    auxiliar: 'María Fernanda López',
-    horarioInicio: '13:00',
-    horarioFin: '17:00',
-    actividades: 6,
-    estado: 'GUARDADO',
-  },
-  {
-    id: 8,
-    fecha: '2026-07-15',
-    auxiliarId: 3,
-    auxiliar: 'Carlos Mendoza Rojas',
-    horarioInicio: '08:00',
-    horarioFin: '12:00',
-    actividades: 4,
-    estado: 'GUARDADO',
-  },
-];
 
 const meses = [
   { value: '1', label: 'Enero' },
@@ -124,11 +33,6 @@ const meses = [
   { value: '12', label: 'Diciembre' },
 ];
 
-function formatearFecha(fecha: string) {
-  const [anio, mes, dia] = fecha.split('-');
-  return `${dia}/${mes}/${anio}`;
-}
-
 export default function AdminInformesScreen({
   onNavigate,
   onLogout,
@@ -138,60 +42,134 @@ export default function AdminInformesScreen({
   const [anio, setAnio] = useState('');
   const [auxiliarId, setAuxiliarId] = useState('');
 
-  const auxiliares = useMemo(() => {
-    const mapa = new Map<number, string>();
+  const [informes, setInformes] = useState<AdminInformeResumen[]>([]);
+  const [auxiliares, setAuxiliares] = useState<AdminAuxiliar[]>([]);
 
-    informesIniciales.forEach((informe) => {
-      mapa.set(informe.auxiliarId, informe.auxiliar);
-    });
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState('');
 
-    return Array.from(mapa.entries())
-      .map(([id, nombre]) => ({
-        id,
-        nombre,
-      }))
-      .sort((a, b) => a.nombre.localeCompare(b.nombre));
-  }, []);
+  // ==========================================
+  // AÑOS DISPONIBLES
+  // ==========================================
 
   const anios = useMemo(() => {
-    return Array.from(
-      new Set(
-        informesIniciales.map((informe) =>
-          new Date(`${informe.fecha}T00:00:00`).getFullYear(),
-        ),
-      ),
-    ).sort((a, b) => b - a);
+    const anioActual = new Date().getFullYear();
+
+    const aniosInformes = informes.map((informe) =>
+      Number(informe.fecha.substring(0, 4))
+    );
+
+    const lista = Array.from(
+      new Set([
+        anioActual,
+        anioActual - 1,
+        anioActual - 2,
+        ...aniosInformes,
+      ])
+    );
+
+    return lista.sort((a, b) => b - a);
+  }, [informes]);
+
+  // ==========================================
+  // CONSTRUIR FILTROS PARA EL BACKEND
+  // ==========================================
+
+  const construirFiltros = (): AdminFiltrosInformes => {
+    const filtros: AdminFiltrosInformes = {};
+
+    if (auxiliarId) {
+      filtros.auxiliarId = Number(auxiliarId);
+    }
+
+    /*
+     * Si tenemos día + mes + año, enviamos una fecha completa.
+     * Ejemplo: 18 + 9 + 2026 => 2026-09-18
+     */
+    if (dia && mes && anio) {
+      const mesFormateado = mes.padStart(2, '0');
+      const diaFormateado = dia.padStart(2, '0');
+
+      filtros.fecha = `${anio}-${mesFormateado}-${diaFormateado}`;
+
+      return filtros;
+    }
+
+    /*
+     * Si tenemos mes + año, usamos ambos filtros.
+     */
+    if (mes && anio) {
+      filtros.mes = Number(mes);
+      filtros.anio = Number(anio);
+
+      return filtros;
+    }
+
+    /*
+     * Si únicamente tenemos año, filtramos por año.
+     */
+    if (anio) {
+      filtros.anio = Number(anio);
+    }
+
+    return filtros;
+  };
+
+  // ==========================================
+  // CARGAR AUXILIARES
+  // ==========================================
+
+  useEffect(() => {
+    const cargarAuxiliares = async () => {
+      try {
+        const data = await obtenerAdminAuxiliares();
+        setAuxiliares(data);
+      } catch (err) {
+        console.error('Error al cargar auxiliares:', err);
+      }
+    };
+
+    cargarAuxiliares();
   }, []);
 
-  const informesFiltrados = useMemo(() => {
-    return informesIniciales.filter((informe) => {
-      const [informeAnio, informeMes, informeDia] = informe.fecha
-        .split('-')
-        .map(Number);
+  // ==========================================
+  // CARGAR INFORMES
+  // ==========================================
 
-      const coincideDia =
-        !dia || informeDia === Number(dia);
+  useEffect(() => {
+    const cargarInformes = async () => {
+      try {
+        setCargando(true);
+        setError('');
 
-      const coincideMes =
-        !mes || informeMes === Number(mes);
+        const filtros = construirFiltros();
 
-      const coincideAnio =
-        !anio || informeAnio === Number(anio);
+        const data = await obtenerAdminInformes(filtros);
 
-      const coincideAuxiliar =
-        !auxiliarId ||
-        informe.auxiliarId === Number(auxiliarId);
+        setInformes(data);
+      } catch (err) {
+        console.error('Error al cargar informes:', err);
 
-      return (
-        coincideDia &&
-        coincideMes &&
-        coincideAnio &&
-        coincideAuxiliar
-      );
-    });
+        setError(
+          err instanceof Error
+            ? err.message
+            : 'No se pudieron cargar los informes'
+        );
+
+        setInformes([]);
+      } finally {
+        setCargando(false);
+      }
+    };
+
+    cargarInformes();
   }, [dia, mes, anio, auxiliarId]);
 
-  const hayFiltros = dia || mes || anio || auxiliarId;
+  // ==========================================
+  // LIMPIAR FILTROS
+  // ==========================================
+
+  const hayFiltros = Boolean(dia || mes || anio || auxiliarId);
 
   const limpiarFiltros = () => {
     setDia('');
@@ -317,7 +295,7 @@ export default function AdminInformesScreen({
                       <option key={numero} value={numero}>
                         {numero}
                       </option>
-                    ),
+                    )
                   )}
                 </select>
               </div>
@@ -390,11 +368,9 @@ export default function AdminInformesScreen({
                   <option value="">Todos los auxiliares</option>
 
                   {auxiliares.map((auxiliar) => (
-                    <option
-                      key={auxiliar.id}
-                      value={auxiliar.id}
-                    >
-                      {auxiliar.nombre}
+                    <option key={auxiliar.id} value={auxiliar.id}>
+                      {auxiliar.nombreCompleto}
+                      {!auxiliar.activo ? ' (Inactivo)' : ''}
                     </option>
                   ))}
                 </select>
@@ -415,6 +391,38 @@ export default function AdminInformesScreen({
                 </button>
               )}
             </div>
+
+            {/* MENSAJE SEMANA ACTUAL */}
+            {auxiliarId && !dia && !mes && !anio && (
+              <p
+                className="text-xs mt-3"
+                style={{ color: '#5a6a82' }}
+              >
+                Mostrando los informes de la semana actual del auxiliar
+                seleccionado.
+              </p>
+            )}
+
+            {/* AYUDA PARA DÍA */}
+            {dia && (!mes || !anio) && (
+              <p
+                className="text-xs mt-3"
+                style={{ color: '#b45309' }}
+              >
+                Para filtrar por un día específico, selecciona también el mes
+                y el año.
+              </p>
+            )}
+
+            {/* AYUDA PARA MES */}
+            {mes && !anio && (
+              <p
+                className="text-xs mt-3"
+                style={{ color: '#b45309' }}
+              >
+                Para filtrar por mes, selecciona también el año.
+              </p>
+            )}
           </div>
 
           {/* TABLA */}
@@ -443,15 +451,81 @@ export default function AdminInformesScreen({
                   className="text-xs mt-0.5"
                   style={{ color: '#8fa0b8' }}
                 >
-                  {informesFiltrados.length}{' '}
-                  {informesFiltrados.length === 1
-                    ? 'informe encontrado'
-                    : 'informes encontrados'}
+                  {cargando
+                    ? 'Cargando informes...'
+                    : `${informes.length} ${
+                        informes.length === 1
+                          ? 'informe encontrado'
+                          : 'informes encontrados'
+                      }`}
                 </p>
               </div>
             </div>
 
-            {informesFiltrados.length === 0 ? (
+            {/* CARGANDO */}
+            {cargando ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div
+                  className="rounded-full mb-4"
+                  style={{
+                    width: 30,
+                    height: 30,
+                    border: '3px solid #e2e8f0',
+                    borderTopColor: B_DARK,
+                    animation: 'spin 0.8s linear infinite',
+                  }}
+                />
+
+                <p
+                  className="text-sm font-medium"
+                  style={{ color: '#5a6a82' }}
+                >
+                  Cargando informes...
+                </p>
+
+                <style>
+                  {`
+                    @keyframes spin {
+                      to {
+                        transform: rotate(360deg);
+                      }
+                    }
+                  `}
+                </style>
+              </div>
+            ) : error ? (
+              /* ERROR */
+              <div className="flex flex-col items-center justify-center py-16 text-center px-5">
+                <div
+                  className="rounded-xl flex items-center justify-center mb-4"
+                  style={{
+                    width: 52,
+                    height: 52,
+                    backgroundColor: '#fef2f2',
+                    color: '#b91c1c',
+                    fontSize: 22,
+                    fontWeight: 700,
+                  }}
+                >
+                  !
+                </div>
+
+                <p
+                  className="text-sm font-medium mb-1"
+                  style={{ color: '#b91c1c' }}
+                >
+                  No se pudieron cargar los informes
+                </p>
+
+                <p
+                  className="text-xs"
+                  style={{ color: '#8fa0b8' }}
+                >
+                  {error}
+                </p>
+              </div>
+            ) : informes.length === 0 ? (
+              /* SIN RESULTADOS */
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <div
                   className="rounded-xl flex items-center justify-center mb-4"
@@ -487,10 +561,12 @@ export default function AdminInformesScreen({
                   className="text-xs"
                   style={{ color: '#8fa0b8' }}
                 >
-                  Prueba modificando los filtros seleccionados.
+                  No existen informes que coincidan con los filtros
+                  seleccionados.
                 </p>
               </div>
             ) : (
+              /* RESULTADOS */
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
@@ -523,12 +599,12 @@ export default function AdminInformesScreen({
                   </thead>
 
                   <tbody>
-                    {informesFiltrados.map((informe, idx) => (
+                    {informes.map((informe, idx) => (
                       <tr
                         key={informe.id}
                         style={{
                           borderBottom:
-                            idx < informesFiltrados.length - 1
+                            idx < informes.length - 1
                               ? '1px solid #f0f4fb'
                               : 'none',
                         }}
@@ -587,7 +663,7 @@ export default function AdminInformesScreen({
                               className="text-sm font-medium"
                               style={{ color: '#111827' }}
                             >
-                              {formatearFecha(informe.fecha)}
+                              {formatearFechaAdmin(informe.fecha)}
                             </span>
                           </div>
                         </td>
@@ -604,19 +680,30 @@ export default function AdminInformesScreen({
                                 color: B_DARK,
                               }}
                             >
-                              {informe.auxiliar
+                              {informe.usuario.nombreCompleto
                                 .split(' ')
                                 .slice(0, 2)
                                 .map((nombre) => nombre.charAt(0))
                                 .join('')}
                             </div>
 
-                            <span
-                              className="text-sm font-medium"
-                              style={{ color: '#111827' }}
-                            >
-                              {informe.auxiliar}
-                            </span>
+                            <div>
+                              <span
+                                className="text-sm font-medium block"
+                                style={{ color: '#111827' }}
+                              >
+                                {informe.usuario.nombreCompleto}
+                              </span>
+
+                              {informe.usuario.codigoSiss && (
+                                <span
+                                  className="text-xs"
+                                  style={{ color: '#8fa0b8' }}
+                                >
+                                  SISS: {informe.usuario.codigoSiss}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </td>
 
@@ -626,9 +713,17 @@ export default function AdminInformesScreen({
                             className="text-sm font-medium"
                             style={{ color: '#111827' }}
                           >
-                            {informe.horarioInicio} -{' '}
-                            {informe.horarioFin}
+                            {informe.horarioInicio} - {informe.horarioFin}
                           </span>
+
+                          {informe.horarioModificado && (
+                            <div
+                              className="text-xs mt-1"
+                              style={{ color: '#b45309' }}
+                            >
+                              Horario modificado
+                            </div>
+                          )}
                         </td>
 
                         {/* ACTIVIDADES */}
@@ -636,14 +731,12 @@ export default function AdminInformesScreen({
                           <span
                             className="px-2.5 py-1 rounded-full text-xs font-medium"
                             style={{
-                              backgroundColor: B_LIGHT,
-                              color: B_DARK,
+                              backgroundColor: '#f1f4f9',
+                              color: '#5a6a82',
                             }}
+                            title="El resumen del backend no incluye el número de actividades"
                           >
-                            {informe.actividades}{' '}
-                            {informe.actividades === 1
-                              ? 'actividad'
-                              : 'actividades'}
+                            —
                           </span>
                         </td>
 
@@ -666,7 +759,9 @@ export default function AdminInformesScreen({
                               }}
                             />
 
-                            Guardado
+                            {informe.estado === 'GUARDADO'
+                              ? 'Guardado'
+                              : informe.estado}
                           </span>
                         </td>
 
@@ -675,39 +770,42 @@ export default function AdminInformesScreen({
                           <button
                             type="button"
                             onClick={() =>
-                                onNavigate('admin-visualizar', String(informe.id))
+                              onNavigate(
+                                'admin-visualizar',
+                                String(informe.id)
+                              )
                             }
                             className="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5"
                             style={{
-                                border: '1.5px solid #cdd5e0',
-                                color: '#111827',
-                                backgroundColor: 'transparent',
+                              border: '1.5px solid #cdd5e0',
+                              color: '#111827',
+                              backgroundColor: 'transparent',
                             }}
                             onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor =
+                              e.currentTarget.style.backgroundColor =
                                 '#f1f4f9';
                             }}
                             onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor =
+                              e.currentTarget.style.backgroundColor =
                                 'transparent';
                             }}
-                            >
+                          >
                             <svg
-                                width="12"
-                                height="12"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2.2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
+                              width="12"
+                              height="12"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
                             >
-                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                                <circle cx="12" cy="12" r="3" />
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                              <circle cx="12" cy="12" r="3" />
                             </svg>
 
                             Visualizar
-                            </button>
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -717,16 +815,15 @@ export default function AdminInformesScreen({
             )}
           </div>
 
-          <p
-            className="text-xs mt-3 text-right"
-            style={{ color: '#8fa0b8' }}
-          >
-            {informesFiltrados.length}{' '}
-            {informesFiltrados.length === 1
-              ? 'informe'
-              : 'informes'}{' '}
-            encontrados
-          </p>
+          {!cargando && !error && (
+            <p
+              className="text-xs mt-3 text-right"
+              style={{ color: '#8fa0b8' }}
+            >
+              {informes.length}{' '}
+              {informes.length === 1 ? 'informe' : 'informes'} encontrados
+            </p>
+          )}
         </div>
       </main>
     </div>

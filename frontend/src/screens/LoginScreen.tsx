@@ -9,12 +9,6 @@ interface Props {
 const B_DARK = '#1a3d7c';
 const B_MID = '#2554a8';
 
-// SOLO PARA PRUEBAS DEL FRONTEND.
-const ADMIN_TEMPORAL = {
-  usuario: 'admin',
-  password: 'admin123',
-};
-
 export default function LoginScreen({ onLogin }: Props) {
   const [usuario, setUsuario] = useState('');
   const [password, setPassword] = useState('');
@@ -33,63 +27,46 @@ export default function LoginScreen({ onLogin }: Props) {
       return;
     }
 
-    /*
-     * ACCESO TEMPORAL DEL ADMINISTRADOR
-     *
-     * Esto existe únicamente para poder probar el frontend.
-     * Cuando el backend implemente el rol ADMIN,
-     * este bloque deberá eliminarse.
-     */
-    if (
-      usuarioLimpio === ADMIN_TEMPORAL.usuario &&
-      passwordLimpio === ADMIN_TEMPORAL.password
-    ) {
-      const administradorTemporal = {
-        nombreCompleto: 'Administrador',
-        cargo: 'Administrador del sistema',
-        rol: 'ADMIN',
-      };
+      setLoading(true);
 
-      localStorage.setItem(
-        'usuario',
-        JSON.stringify(administradorTemporal),
-      );
+      try {
+        const data = await login(
+          usuarioLimpio,
+          passwordLimpio,
+        );
 
-      onLogin('admin-dashboard');
-      return;
-    }
+        localStorage.setItem('token', data.token);
+        localStorage.setItem(
+          'usuario',
+          JSON.stringify(data.usuario),
+        );
 
-    /*
-     * ACCESO REAL DEL AUXILIAR
-     *
-     * Actualmente el backend recibe:
-     * usuario     -> Código SISS
-     * contraseña -> Carnet
-     */
-    setLoading(true);
+        if (data.usuario.rol === 'ADMIN') {
+          onLogin('admin-dashboard');
+          return;
+        }
 
-    try {
-      const data = await login(
-        usuarioLimpio,
-        passwordLimpio,
-      );
+        if (data.usuario.rol === 'AUXILIAR') {
+          onLogin('dashboard');
+          return;
+        }
 
-      localStorage.setItem('token', data.token);
-      localStorage.setItem(
-        'usuario',
-        JSON.stringify(data.usuario),
-      );
+        localStorage.removeItem('token');
+        localStorage.removeItem('usuario');
 
-      onLogin('dashboard');
-    } catch (error) {
-      if (error instanceof Error) {
-        setError(error.message);
-      } else {
-        setError('No se pudo iniciar sesión.');
+        setError(
+          'El usuario no tiene un rol válido para acceder al sistema.',
+        );
+      } catch (error) {
+        if (error instanceof Error) {
+          setError(error.message);
+        } else {
+          setError('No se pudo iniciar sesión.');
+        }
+      } finally {
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
-    }
+
   };
 
   return (

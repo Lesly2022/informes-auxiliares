@@ -1,5 +1,12 @@
+import { useEffect, useState } from 'react';
 import AdminSidebar from '../../components/AdminSidebar';
 import type { AdminScreen } from '../../types';
+import {
+  obtenerAdminDashboard,
+  formatearFechaAdmin,
+  obtenerHorarioAdmin,
+  type AdminDashboardResponse,
+} from '../../services/admin.service';
 
 interface Props {
   onNavigate: (screen: AdminScreen, id?: string) => void;
@@ -9,44 +16,6 @@ interface Props {
 const B_DARK = '#1a3d7c';
 const B_MID = '#2855a5';
 const B_LIGHT = '#eef4ff';
-
-const ultimosInformes = [
-  {
-    id: 1,
-    fecha: '20/09/2026',
-    auxiliar: 'José Alejandro Montaño Laura',
-    horario: '09:00 - 13:00',
-    actividades: 4,
-  },
-  {
-    id: 2,
-    fecha: '20/09/2026',
-    auxiliar: 'María Fernanda López',
-    horario: '13:00 - 17:00',
-    actividades: 3,
-  },
-  {
-    id: 3,
-    fecha: '19/09/2026',
-    auxiliar: 'Carlos Mendoza Rojas',
-    horario: '08:00 - 12:00',
-    actividades: 5,
-  },
-  {
-    id: 4,
-    fecha: '19/09/2026',
-    auxiliar: 'Andrea Vargas Flores',
-    horario: '14:00 - 18:00',
-    actividades: 2,
-  },
-  {
-    id: 5,
-    fecha: '18/09/2026',
-    auxiliar: 'Luis Fernando Rocha',
-    horario: '09:00 - 13:00',
-    actividades: 4,
-  },
-];
 
 function StatCard({
   titulo,
@@ -166,6 +135,39 @@ export default function AdminDashboardScreen({
   onNavigate,
   onLogout,
 }: Props) {
+  const [dashboard, setDashboard] =
+    useState<AdminDashboardResponse | null>(null);
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    async function cargarDashboard() {
+      try {
+        setLoading(true);
+        setError('');
+
+        const data = await obtenerAdminDashboard();
+
+        setDashboard(data);
+      } catch (error) {
+        if (error instanceof Error) {
+          setError(error.message);
+        } else {
+          setError(
+            'No se pudieron obtener los datos del dashboard.'
+          );
+        }
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    cargarDashboard();
+  }, []);
+
+  const resumen = dashboard?.resumen;
+
   return (
     <div
       className="flex min-h-screen"
@@ -242,25 +244,39 @@ export default function AdminDashboardScreen({
             </p>
           </div>
 
+          {/* Error */}
+          {error && (
+            <div
+              className="mb-6 px-4 py-3 rounded-lg border text-sm"
+              style={{
+                backgroundColor: '#fff5f5',
+                borderColor: '#fecaca',
+                color: '#b91c1c',
+              }}
+            >
+              {error}
+            </div>
+          )}
+
           {/* Estadísticas */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             <StatCard
               titulo="Auxiliares"
-              valor={8}
+              valor={resumen?.totalAuxiliares ?? 0}
               descripcion="Registrados en el sistema"
               icono="users"
             />
 
             <StatCard
               titulo="Auxiliares activos"
-              valor={6}
+              valor={resumen?.auxiliaresActivos ?? 0}
               descripcion="Con acceso habilitado"
               icono="active"
             />
 
             <StatCard
               titulo="Informes"
-              valor={124}
+              valor={resumen?.totalInformes ?? 0}
               descripcion="Informes registrados"
               icono="reports"
             />
@@ -338,77 +354,114 @@ export default function AdminDashboardScreen({
                 </thead>
 
                 <tbody>
-                  {ultimosInformes.map((informe) => (
-                    <tr
-                      key={informe.id}
-                      className="border-t"
-                      style={{ borderColor: '#edf0f5' }}
-                    >
+                  {loading ? (
+                    <tr>
                       <td
-                        className="px-6 py-4 text-sm"
-                        style={{ color: '#536076' }}
+                        colSpan={5}
+                        className="px-6 py-10 text-center text-sm"
+                        style={{ color: '#8993a5' }}
                       >
-                        {informe.fecha}
-                      </td>
-
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="rounded-lg flex items-center justify-center text-xs font-bold shrink-0"
-                            style={{
-                              width: 34,
-                              height: 34,
-                              backgroundColor: B_LIGHT,
-                              color: B_DARK,
-                            }}
-                          >
-                            {informe.auxiliar
-                              .split(' ')
-                              .slice(0, 2)
-                              .map((n) => n.charAt(0))
-                              .join('')}
-                          </div>
-
-                          <span
-                            className="text-sm font-medium"
-                            style={{ color: '#26354d' }}
-                          >
-                            {informe.auxiliar}
-                          </span>
-                        </div>
-                      </td>
-
-                      <td
-                        className="px-6 py-4 text-sm"
-                        style={{ color: '#536076' }}
-                      >
-                        {informe.horario}
-                      </td>
-
-                      <td
-                        className="px-6 py-4 text-sm text-center font-semibold"
-                        style={{ color: '#536076' }}
-                      >
-                        {informe.actividades}
-                      </td>
-
-                      <td className="px-6 py-4 text-right">
-                        <button
-                            type="button"
-                            onClick={() =>
-                                onNavigate('admin-visualizar', String(informe.id))
-                            }
-                            className="text-sm font-semibold px-3 py-1.5 rounded-lg"
-                            style={{
-                                color: B_MID,
-                                backgroundColor: B_LIGHT,
-                            }}
-                            >
-                            Ver informe
-                            </button>
+                        Cargando informes...
                       </td>
                     </tr>
-                  ))}
+                  ) : dashboard &&
+                    dashboard.informesRecientes.length > 0 ? (
+                    dashboard.informesRecientes.map((informe) => {
+                      const nombreAuxiliar =
+                        informe.usuario?.nombreCompleto ||
+                        'Auxiliar';
+
+                      const iniciales = nombreAuxiliar
+                        .split(' ')
+                        .filter(Boolean)
+                        .slice(0, 2)
+                        .map((nombre) => nombre.charAt(0))
+                        .join('')
+                        .toUpperCase();
+
+                      return (
+                        <tr
+                          key={informe.id}
+                          className="border-t"
+                          style={{ borderColor: '#edf0f5' }}
+                        >
+                          <td
+                            className="px-6 py-4 text-sm"
+                            style={{ color: '#536076' }}
+                          >
+                            {formatearFechaAdmin(informe.fecha)}
+                          </td>
+
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="rounded-lg flex items-center justify-center text-xs font-bold shrink-0"
+                                style={{
+                                  width: 34,
+                                  height: 34,
+                                  backgroundColor: B_LIGHT,
+                                  color: B_DARK,
+                                }}
+                              >
+                                {iniciales}
+                              </div>
+
+                              <span
+                                className="text-sm font-medium"
+                                style={{ color: '#26354d' }}
+                              >
+                                {nombreAuxiliar}
+                              </span>
+                            </div>
+                          </td>
+
+                          <td
+                            className="px-6 py-4 text-sm"
+                            style={{ color: '#536076' }}
+                          >
+                            {obtenerHorarioAdmin(informe)}
+                          </td>
+
+                          <td
+                            className="px-6 py-4 text-sm text-center font-semibold"
+                            style={{ color: '#8993a5' }}
+                            title="El endpoint del dashboard no proporciona el conteo de actividades"
+                          >
+                            —
+                          </td>
+
+                          <td className="px-6 py-4 text-right">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onNavigate(
+                                  'admin-visualizar',
+                                  String(informe.id)
+                                )
+                              }
+                              className="text-sm font-semibold px-3 py-1.5 rounded-lg"
+                              style={{
+                                color: B_MID,
+                                backgroundColor: B_LIGHT,
+                              }}
+                            >
+                              Ver informe
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="px-6 py-10 text-center text-sm"
+                        style={{ color: '#8993a5' }}
+                      >
+                        No existen informes registrados.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

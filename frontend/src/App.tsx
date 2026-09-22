@@ -7,6 +7,7 @@ import InformeFormScreen from './screens/InformeFormScreen';
 import InformesPasadosScreen from './screens/InformesPasadosScreen';
 import VisualizarInformeScreen from './screens/VisualizarInformeScreen';
 
+import AdminMateriasScreen from './screens/admin/AdminMateriasScreen';
 import AdminDashboardScreen from './screens/admin/AdminDashboardScreen';
 import AdminInformesScreen from './screens/admin/AdminInformesScreen';
 import AdminAuxiliaresScreen from './screens/admin/AdminAuxiliaresScreen';
@@ -167,6 +168,14 @@ export default function App() {
     case 'admin-salas':
       return (
         <AdminSalasScreen
+          onNavigate={navigateAdmin}
+          onLogout={handleLogout}
+        />
+      );
+
+    case 'admin-materias':
+      return (
+        <AdminMateriasScreen
           onNavigate={navigateAdmin}
           onLogout={handleLogout}
         />

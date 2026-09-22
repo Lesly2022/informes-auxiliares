@@ -1,11 +1,11 @@
 import { Router } from 'express';
-import { prisma } from '../lib/prisma';
+import { prisma } from '../lib/prisma.js';
 import bcrypt from 'bcrypt';
 import {
   verificarToken,
   verificarAdmin,
   AuthRequest,
-} from '../middlewares/auth.middleware';
+} from '../middlewares/auth.middleware.js';
 
 const router = Router();
 
@@ -652,6 +652,177 @@ router.patch(
 
       return res.status(500).json({
         mensaje: 'Error al cambiar el estado de la sala',
+      });
+    }
+  }
+);
+
+// ==================== MATERIAS ====================
+
+// Obtener todas las materias
+router.get(
+  '/materias',
+  verificarToken,
+  verificarAdmin,
+  async (_req: AuthRequest, res) => {
+    try {
+      const materias = await prisma.materia.findMany({
+        orderBy: {
+          nombre: 'asc',
+        },
+      });
+
+      return res.json(materias);
+    } catch (error) {
+      console.error(error);
+
+      return res.status(500).json({
+        mensaje: 'Error al obtener materias',
+      });
+    }
+  }
+);
+
+// Crear materia
+router.post(
+  '/materias',
+  verificarToken,
+  verificarAdmin,
+  async (req: AuthRequest, res) => {
+    try {
+      const { codigo, nombre } = req.body;
+
+      if (!nombre?.trim()) {
+        return res.status(400).json({
+          mensaje: 'El nombre de la materia es obligatorio',
+        });
+      }
+
+      const materia = await prisma.materia.create({
+        data: {
+          codigo: codigo?.trim() || null,
+          nombre: nombre.trim(),
+          activo: true,
+        },
+      });
+
+      return res.status(201).json(materia);
+    } catch (error) {
+      console.error(error);
+
+      return res.status(500).json({
+        mensaje: 'Error al crear materia',
+      });
+    }
+  }
+);
+
+// Editar materia
+router.put(
+  '/materias/:id',
+  verificarToken,
+  verificarAdmin,
+  async (req: AuthRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+
+      if (isNaN(id)) {
+        return res.status(400).json({
+          mensaje: 'ID de materia inválido',
+        });
+      }
+
+      const { codigo, nombre } = req.body;
+
+      if (!nombre?.trim()) {
+        return res.status(400).json({
+          mensaje: 'El nombre de la materia es obligatorio',
+        });
+      }
+
+      const materia = await prisma.materia.findUnique({
+        where: {
+          id,
+        },
+      });
+
+      if (!materia) {
+        return res.status(404).json({
+          mensaje: 'Materia no encontrada',
+        });
+      }
+
+      const materiaActualizada = await prisma.materia.update({
+        where: {
+          id,
+        },
+        data: {
+          codigo: codigo?.trim() || null,
+          nombre: nombre.trim(),
+        },
+      });
+
+      return res.json(materiaActualizada);
+    } catch (error) {
+      console.error(error);
+
+      return res.status(500).json({
+        mensaje: 'Error al actualizar materia',
+      });
+    }
+  }
+);
+
+// Activar o desactivar materia
+router.patch(
+  '/materias/:id/estado',
+  verificarToken,
+  verificarAdmin,
+  async (req: AuthRequest, res) => {
+    try {
+      const id = Number(req.params.id);
+
+      if (isNaN(id)) {
+        return res.status(400).json({
+          mensaje: 'ID de materia inválido',
+        });
+      }
+
+      const { activo } = req.body;
+
+      if (typeof activo !== 'boolean') {
+        return res.status(400).json({
+          mensaje: 'El campo activo debe ser booleano',
+        });
+      }
+
+      const materia = await prisma.materia.findUnique({
+        where: {
+          id,
+        },
+      });
+
+      if (!materia) {
+        return res.status(404).json({
+          mensaje: 'Materia no encontrada',
+        });
+      }
+
+      const materiaActualizada = await prisma.materia.update({
+        where: {
+          id,
+        },
+        data: {
+          activo,
+        },
+      });
+
+      return res.json(materiaActualizada);
+    } catch (error) {
+      console.error(error);
+
+      return res.status(500).json({
+        mensaje: 'Error al cambiar el estado de la materia',
       });
     }
   }

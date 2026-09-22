@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
 import type { ActividadAcademica, Incidencia, Screen } from '../types';
-import { USUARIO, SALAS, DOCENTES, MATERIAS, HORARIOS_ACADEMICOS, HORARIOS_TURNO_ALTERNATIVOS, HORARIO_TURNO_DEFAULT } from '../data';
+import {
+  USUARIO,
+  HORARIOS_ACADEMICOS,
+  HORARIOS_TURNO_ALTERNATIVOS,
+  HORARIO_TURNO_DEFAULT,
+} from '../data';
 import Sidebar from '../components/Sidebar';
 import {
   crearInforme,
@@ -8,6 +13,14 @@ import {
   obtenerInformePorId,
   type CrearInformePayload,
 } from '../services/informes.service';
+import {
+  obtenerSalas,
+  obtenerDocentes,
+  obtenerMaterias,
+  type Sala,
+  type Docente,
+  type Materia,
+} from '../services/catalogos.service';
 
 interface Props {
   onNavigate: (s: Screen, id?: string) => void;
@@ -164,11 +177,35 @@ const [fecha, setFecha] = useState(obtenerFechaBolivia);
   const [errorGuardado, setErrorGuardado] = useState('');
   const [nombreUsuario, setNombreUsuario] = useState(USUARIO.nombre);
   const [cargandoEdicion, setCargandoEdicion] = useState(false);
+  const [salas, setSalas] = useState<Sala[]>([]);
+  const [docentes, setDocentes] = useState<Docente[]>([]);
+  const [materias, setMaterias] = useState<Materia[]>([]);
+  const [catalogosCargados, setCatalogosCargados] = useState(false);
 
   const horarioEfectivo = horarioCambiado ? horarioOtro : HORARIO_TURNO_DEFAULT;
+  useEffect(() => {
+  const cargarCatalogos = async () => {
+    try {
+      const [salasData, docentesData, materiasData] = await Promise.all([
+        obtenerSalas(),
+        obtenerDocentes(),
+        obtenerMaterias(),
+      ]);
+
+      setSalas(salasData);
+      setDocentes(docentesData);
+      setMaterias(materiasData);
+      setCatalogosCargados(true);
+    } catch (error) {
+      console.error('Error al cargar salas, docentes y materias:', error);
+    }
+  };
+
+  cargarCatalogos();
+}, []);
 
 useEffect(() => {
-  if (!editReportId) {
+  if (!editReportId || !catalogosCargados) {
     return;
   }
 
@@ -214,11 +251,12 @@ useEffect(() => {
             act.materiaOtra ||
             '';
 
-          const docenteEstaEnLista =
-            DOCENTES.includes(nombreDocente);
-
-          const materiaEstaEnLista =
-            MATERIAS.includes(nombreMateria);
+          const docenteEstaEnLista = docentes.some(
+            (docente) => docente.nombreCompleto === nombreDocente
+          );
+          const materiaEstaEnLista = materias.some(
+            (materia) => materia.nombre === nombreMateria
+          );
 
           return {
             id: String(act.id),
@@ -320,7 +358,7 @@ useEffect(() => {
   return () => {
     activo = false;
   };
-}, [editReportId]);
+}, [editReportId, catalogosCargados]);
 
   const validate = (): boolean => {
     const e: Record<string, string> = {};
@@ -355,13 +393,30 @@ useEffect(() => {
       const payload: CrearInformePayload = {
         horarioInicio,
         horarioFin,
+        fecha,
         horarioModificado: horarioCambiado,
         actividadesAcademicas: actividadesAcademicas.map(act => ({
           sala: act.sala,
-          docenteId: null,
-          docenteOtro: act.docente === 'Otro' ? act.docenteOtro.trim() : act.docente.trim(),
-          materiaId: null,
-          materiaOtra: act.materia === 'Otra' ? act.materiaOtra.trim() : act.materia.trim(),
+          docenteId:
+            act.docente && act.docente !== 'Otro'
+              ? docentes.find((docente) => docente.nombreCompleto === act.docente)?.id ?? null
+              : null,
+
+          docenteOtro:
+            act.docente === 'Otro'
+              ? act.docenteOtro.trim()
+              : null,
+          materiaId:
+            act.materia && act.materia !== 'Otra'
+              ? materias.find(
+                  (materia) => materia.nombre === act.materia
+                )?.id ?? null
+              : null,
+
+          materiaOtra:
+            act.materia === 'Otra'
+              ? act.materiaOtra.trim()
+              : null,
           horarioInicio: act.horario.split('-')[0]?.trim() || '',
           horarioFin: act.horario.split('-')[1]?.trim() || '',
           observaciones: act.observaciones.trim() || null,
@@ -696,7 +751,11 @@ useEffect(() => {
                         <label className="text-xs font-medium" style={{ color: '#5a6a82' }}>Sala</label>
                         <select value={act.sala} onChange={e => updateActividad(act.id, 'sala', e.target.value)} style={selectBase} onFocus={focusIn} onBlur={focusOut}>
                           <option value="">Seleccionar sala…</option>
-                          {SALAS.map(s => <option key={s} value={s}>{s}</option>)}
+                          {salas.map((sala) => (
+                              <option key={sala.id} value={sala.nombre}>
+                                {sala.nombre}
+                              </option>
+                            ))}
                         </select>
                       </div>
                       <div className="flex flex-col gap-1.5">
@@ -710,7 +769,12 @@ useEffect(() => {
                         <label className="text-xs font-medium" style={{ color: '#5a6a82' }}>Docente / Responsable</label>
                         <select value={act.docente} onChange={e => updateActividad(act.id, 'docente', e.target.value)} style={selectBase} onFocus={focusIn} onBlur={focusOut}>
                           <option value="">Seleccionar docente…</option>
-                          {DOCENTES.map(d => <option key={d} value={d}>{d}</option>)}
+                          {docentes.map((docente) => (
+                            <option key={docente.id} value={docente.nombreCompleto}>
+                              {docente.nombreCompleto}
+                            </option>
+                          ))}
+                          <option value="Otro">Otro</option>
                         </select>
                         {act.docente === 'Otro' && (
                           <input
@@ -728,7 +792,12 @@ useEffect(() => {
                         <label className="text-xs font-medium" style={{ color: '#5a6a82' }}>Materia / Actividad</label>
                         <select value={act.materia} onChange={e => updateActividad(act.id, 'materia', e.target.value)} style={selectBase} onFocus={focusIn} onBlur={focusOut}>
                           <option value="">Seleccionar materia…</option>
-                          {MATERIAS.map(m => <option key={m} value={m}>{m}</option>)}
+                          {materias.map((materia) => (
+                            <option key={materia.id} value={materia.nombre}>
+                              {materia.nombre}
+                            </option>
+                          ))}
+                          <option value="Otra">Otra</option>
                         </select>
                         {act.materia === 'Otra' && (
                           <input

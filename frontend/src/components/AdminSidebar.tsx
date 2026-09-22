@@ -16,6 +16,7 @@ const navItems: {
   { label: 'Auxiliares', screen: 'admin-auxiliares', icon: 'users' },
   { label: 'Docentes', screen: 'admin-docentes', icon: 'teacher' },
   { label: 'Salas', screen: 'admin-salas', icon: 'room' },
+  { label: 'Materias', screen: 'admin-materias', icon: 'book' },
 ];
 
 function Icon({ name }: { name: string }) {
@@ -113,6 +114,23 @@ function Icon({ name }: { name: string }) {
           <path d="M9 9h6" />
           <path d="M9 13h6" />
           <path d="M9 17h2" />
+        </svg>
+      );
+
+    case 'book':
+      return (
+        <svg
+          width="17"
+          height="17"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
         </svg>
       );
 

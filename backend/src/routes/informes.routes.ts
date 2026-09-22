@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { prisma } from '../lib/prisma';
-import { verificarToken, AuthRequest } from '../middlewares/auth.middleware';
+import { prisma } from '../lib/prisma.js';
+import { verificarToken, AuthRequest } from '../middlewares/auth.middleware.js';
 
 const obtenerFechaBolivia = (): string => {
   return new Intl.DateTimeFormat('en-CA', {
@@ -167,6 +167,7 @@ router.put('/:id', verificarToken, async (req: AuthRequest, res) => {
     }
 
     const {
+      fecha,
       horarioInicio,
       horarioFin,
       horarioModificado = false,
@@ -415,6 +416,7 @@ router.post('/', verificarToken, async (req: AuthRequest, res) => {
     }
 
     const {
+      fecha,
       horarioInicio,
       horarioFin,
       horarioModificado = false,
@@ -534,14 +536,20 @@ for (const pendiente of pendientes) {
   }
 }
 
-    // Fecha actual del servidor
-    const fecha = new Date(`${obtenerFechaBolivia()}T00:00:00-04:00`);
+    // Fecha seleccionada en el formulario
+    if (!fecha) {
+      return res.status(400).json({
+        mensaje: 'La fecha del informe es obligatoria',
+      });
+    }
+
+    const fechaInforme = new Date(`${fecha}T00:00:00-04:00`);
 
     // Crear informe y todos sus elementos relacionados
     const informe = await prisma.informe.create({
       data: {
         usuarioId,
-        fecha,
+        fecha: fechaInforme,
         horarioInicio,
         horarioFin,
         horarioModificado,

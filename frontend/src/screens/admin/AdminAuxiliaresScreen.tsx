@@ -1,61 +1,25 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import AdminSidebar from '../../components/AdminSidebar';
 import type { AdminScreen } from '../../types';
+import {
+  obtenerAdminAuxiliares,
+  crearAdminAuxiliar,
+  actualizarAdminAuxiliar,
+  cambiarEstadoAdminAuxiliar,
+  type AdminAuxiliar,
+  type AdminAuxiliarFormulario,
+} from '../../services/admin.service';
 
 interface Props {
   onNavigate: (screen: AdminScreen) => void;
   onLogout: () => void;
 }
 
-interface Auxiliar {
-  id: number;
-  nombreCompleto: string;
-  codigoSiss: string;
-  carnet: string;
-  cargo: string;
-  horarioInicio: string;
-  horarioFin: string;
-  activo: boolean;
-}
-
 const B_DARK = '#1a3d7c';
 const B_MID = '#2554a8';
 const B_LIGHT = '#e8eef8';
 
-const auxiliaresIniciales: Auxiliar[] = [
-  {
-    id: 1,
-    nombreCompleto: 'José Alejandro Montaño Laura',
-    codigoSiss: '202001823',
-    carnet: '8018935',
-    cargo: 'Auxiliar de Laboratorio de Cómputo',
-    horarioInicio: '09:00',
-    horarioFin: '13:00',
-    activo: true,
-  },
-  {
-    id: 2,
-    nombreCompleto: 'María Fernanda López',
-    codigoSiss: '202103245',
-    carnet: '9123456',
-    cargo: 'Auxiliar de Laboratorio de Cómputo',
-    horarioInicio: '13:00',
-    horarioFin: '17:00',
-    activo: true,
-  },
-  {
-    id: 3,
-    nombreCompleto: 'Carlos Mendoza Rojas',
-    codigoSiss: '202004587',
-    carnet: '7458963',
-    cargo: 'Auxiliar de Laboratorio de Cómputo',
-    horarioInicio: '08:00',
-    horarioFin: '12:00',
-    activo: false,
-  },
-];
-
-const formularioVacio = {
+const formularioVacio: AdminAuxiliarFormulario = {
   nombreCompleto: '',
   codigoSiss: '',
   carnet: '',
@@ -68,16 +32,49 @@ export default function AdminAuxiliaresScreen({
   onNavigate,
   onLogout,
 }: Props) {
-  const [auxiliares, setAuxiliares] =
-    useState<Auxiliar[]>(auxiliaresIniciales);
-
+  const [auxiliares, setAuxiliares] = useState<AdminAuxiliar[]>([]);
   const [busqueda, setBusqueda] = useState('');
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [editandoId, setEditandoId] = useState<number | null>(null);
   const [mensaje, setMensaje] = useState('');
+  const [mensajeExito, setMensajeExito] = useState('');
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const [cambiandoEstadoId, setCambiandoEstadoId] =
+    useState<number | null>(null);
 
   const [formulario, setFormulario] =
-    useState(formularioVacio);
+    useState<AdminAuxiliarFormulario>(formularioVacio);
+
+  // ==========================================
+  // CARGAR AUXILIARES REALES
+  // ==========================================
+
+  const cargarAuxiliares = async () => {
+    try {
+      setCargando(true);
+      setMensaje('');
+
+      const data = await obtenerAdminAuxiliares();
+      setAuxiliares(data);
+    } catch (err) {
+      setMensaje(
+        err instanceof Error
+          ? err.message
+          : 'No se pudieron cargar los auxiliares'
+      );
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarAuxiliares();
+  }, []);
+
+  // ==========================================
+  // BUSCADOR
+  // ==========================================
 
   const auxiliaresFiltrados = useMemo(() => {
     const texto = busqueda.trim().toLowerCase();
@@ -90,18 +87,23 @@ export default function AdminAuxiliaresScreen({
       (auxiliar) =>
         auxiliar.nombreCompleto.toLowerCase().includes(texto) ||
         auxiliar.codigoSiss.toLowerCase().includes(texto) ||
-        auxiliar.carnet.toLowerCase().includes(texto),
+        auxiliar.carnet.toLowerCase().includes(texto)
     );
   }, [auxiliares, busqueda]);
+
+  // ==========================================
+  // FORMULARIO
+  // ==========================================
 
   const abrirNuevoAuxiliar = () => {
     setFormulario(formularioVacio);
     setEditandoId(null);
     setMensaje('');
+    setMensajeExito('');
     setMostrarFormulario(true);
   };
 
-  const abrirEdicion = (auxiliar: Auxiliar) => {
+  const abrirEdicion = (auxiliar: AdminAuxiliar) => {
     setFormulario({
       nombreCompleto: auxiliar.nombreCompleto,
       codigoSiss: auxiliar.codigoSiss,
@@ -113,101 +115,140 @@ export default function AdminAuxiliaresScreen({
 
     setEditandoId(auxiliar.id);
     setMensaje('');
+    setMensajeExito('');
     setMostrarFormulario(true);
   };
 
   const cerrarFormulario = () => {
+    if (guardando) {
+      return;
+    }
+
     setMostrarFormulario(false);
     setEditandoId(null);
     setFormulario(formularioVacio);
     setMensaje('');
   };
 
-  const guardarAuxiliar = (e: React.FormEvent) => {
-    e.preventDefault();
-    setMensaje('');
+  // ==========================================
+  // GUARDAR / EDITAR
+  // ==========================================
 
-    const nombre = formulario.nombreCompleto.trim();
-    const codigoSiss = formulario.codigoSiss.trim();
-    const carnet = formulario.carnet.trim();
+  const guardarAuxiliar = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    setMensaje('');
+    setMensajeExito('');
+
+    const datos: AdminAuxiliarFormulario = {
+      nombreCompleto: formulario.nombreCompleto.trim(),
+      codigoSiss: formulario.codigoSiss.trim(),
+      carnet: formulario.carnet.trim(),
+      cargo: formulario.cargo.trim(),
+      horarioInicio: formulario.horarioInicio,
+      horarioFin: formulario.horarioFin,
+    };
 
     if (
-      !nombre ||
-      !codigoSiss ||
-      !carnet ||
-      !formulario.horarioInicio ||
-      !formulario.horarioFin
+      !datos.nombreCompleto ||
+      !datos.codigoSiss ||
+      !datos.carnet ||
+      !datos.cargo ||
+      !datos.horarioInicio ||
+      !datos.horarioFin
     ) {
       setMensaje('Completa todos los campos obligatorios.');
       return;
     }
 
-    const codigoRepetido = auxiliares.some(
-      (auxiliar) =>
-        auxiliar.codigoSiss === codigoSiss &&
-        auxiliar.id !== editandoId,
-    );
-
-    if (codigoRepetido) {
-      setMensaje('Ya existe un auxiliar con ese Código SISS.');
-      return;
-    }
-
-    if (formulario.horarioInicio >= formulario.horarioFin) {
+    if (datos.horarioInicio >= datos.horarioFin) {
       setMensaje(
-        'La hora de inicio debe ser anterior a la hora de finalización.',
+        'La hora de inicio debe ser anterior a la hora de finalización.'
       );
       return;
     }
 
-    if (editandoId !== null) {
-      setAuxiliares((actuales) =>
-        actuales.map((auxiliar) =>
-          auxiliar.id === editandoId
-            ? {
-                ...auxiliar,
-                nombreCompleto: nombre,
-                codigoSiss,
-                carnet,
-                cargo: formulario.cargo.trim(),
-                horarioInicio: formulario.horarioInicio,
-                horarioFin: formulario.horarioFin,
-              }
-            : auxiliar,
-        ),
+    try {
+      setGuardando(true);
+
+      if (editandoId !== null) {
+        const actualizado = await actualizarAdminAuxiliar(
+          editandoId,
+          datos
+        );
+
+        setAuxiliares((actuales) =>
+          actuales.map((auxiliar) =>
+            auxiliar.id === actualizado.id
+              ? actualizado
+              : auxiliar
+          )
+        );
+
+        setMensajeExito('Auxiliar actualizado correctamente.');
+      } else {
+        const nuevo = await crearAdminAuxiliar(datos);
+
+        setAuxiliares((actuales) =>
+          [...actuales, nuevo].sort((a, b) =>
+            a.nombreCompleto.localeCompare(b.nombreCompleto)
+          )
+        );
+
+        setMensajeExito('Auxiliar registrado correctamente.');
+      }
+
+      setMostrarFormulario(false);
+      setEditandoId(null);
+      setFormulario(formularioVacio);
+    } catch (err) {
+      setMensaje(
+        err instanceof Error
+          ? err.message
+          : 'No se pudo guardar el auxiliar'
       );
-    } else {
-      const nuevoAuxiliar: Auxiliar = {
-        id:
-          auxiliares.length > 0
-            ? Math.max(...auxiliares.map((auxiliar) => auxiliar.id)) + 1
-            : 1,
-        nombreCompleto: nombre,
-        codigoSiss,
-        carnet,
-        cargo: formulario.cargo.trim(),
-        horarioInicio: formulario.horarioInicio,
-        horarioFin: formulario.horarioFin,
-        activo: true,
-      };
-
-      setAuxiliares((actuales) => [
-        nuevoAuxiliar,
-        ...actuales,
-      ]);
+    } finally {
+      setGuardando(false);
     }
-
-    cerrarFormulario();
   };
 
-  const cambiarEstado = (id: number) => {
-    setAuxiliares((actuales) =>
-      actuales.map((auxiliar) =>
-        auxiliar.id === id
-          ? { ...auxiliar, activo: !auxiliar.activo }
-          : auxiliar,
-      ),
-    );
+  // ==========================================
+  // ACTIVAR / DESACTIVAR
+  // ==========================================
+
+  const cambiarEstado = async (auxiliar: AdminAuxiliar) => {
+    const nuevoEstado = !auxiliar.activo;
+
+    try {
+      setCambiandoEstadoId(auxiliar.id);
+      setMensaje('');
+      setMensajeExito('');
+
+      const actualizado = await cambiarEstadoAdminAuxiliar(
+        auxiliar.id,
+        nuevoEstado
+      );
+
+      setAuxiliares((actuales) =>
+        actuales.map((item) =>
+          item.id === actualizado.id ? actualizado : item
+        )
+      );
+
+      setMensajeExito(
+        nuevoEstado
+          ? 'Auxiliar activado correctamente.'
+          : 'Auxiliar desactivado correctamente.'
+      );
+    } catch (err) {
+      setMensaje(
+        err instanceof Error
+          ? err.message
+          : 'No se pudo cambiar el estado del auxiliar'
+      );
+    } finally {
+      setCambiandoEstadoId(null);
+    }
   };
 
   const inputBase: React.CSSProperties = {
@@ -276,6 +317,34 @@ export default function AdminAuxiliaresScreen({
         </header>
 
         <div className="flex-1 px-8 py-6">
+          {/* MENSAJE DE ÉXITO */}
+          {mensajeExito && (
+            <div
+              className="rounded-lg px-4 py-3 text-sm mb-5"
+              style={{
+                backgroundColor: '#f0fdf4',
+                color: '#166534',
+                border: '1px solid #bbf7d0',
+              }}
+            >
+              {mensajeExito}
+            </div>
+          )}
+
+          {/* ERROR GENERAL */}
+          {mensaje && !mostrarFormulario && (
+            <div
+              className="rounded-lg px-4 py-3 text-sm mb-5"
+              style={{
+                backgroundColor: '#fef2f2',
+                color: '#b91c1c',
+                border: '1px solid #fecaca',
+              }}
+            >
+              {mensaje}
+            </div>
+          )}
+
           {/* RESUMEN */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
             <Resumen
@@ -352,196 +421,265 @@ export default function AdminAuxiliaresScreen({
                 className="text-xs mt-0.5"
                 style={{ color: '#8fa0b8' }}
               >
-                {auxiliaresFiltrados.length}{' '}
-                {auxiliaresFiltrados.length === 1
-                  ? 'auxiliar encontrado'
-                  : 'auxiliares encontrados'}
+                {cargando
+                  ? 'Cargando auxiliares...'
+                  : `${auxiliaresFiltrados.length} ${
+                      auxiliaresFiltrados.length === 1
+                        ? 'auxiliar encontrado'
+                        : 'auxiliares encontrados'
+                    }`}
               </p>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr>
-                    {[
-                      'Auxiliar',
-                      'Código SISS',
-                      'Horario',
-                      'Estado',
-                      'Acciones',
-                    ].map((columna) => (
-                      <th
-                        key={columna}
-                        className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide"
-                        style={{
-                          color: '#8fa0b8',
-                          backgroundColor: '#fafbfd',
-                          fontSize: 11,
-                          borderBottom: '1px solid #e2e8f0',
-                        }}
-                      >
-                        {columna}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
+            {cargando ? (
+              <div className="text-center px-5 py-14">
+                <div
+                  className="rounded-full mx-auto mb-3"
+                  style={{
+                    width: 30,
+                    height: 30,
+                    border: '3px solid #e2e8f0',
+                    borderTopColor: B_DARK,
+                    animation: 'spin 0.8s linear infinite',
+                  }}
+                />
 
-                <tbody>
-                  {auxiliaresFiltrados.map((auxiliar, index) => (
-                    <tr
-                      key={auxiliar.id}
-                      style={{
-                        borderBottom:
-                          index < auxiliaresFiltrados.length - 1
-                            ? '1px solid #f0f4fb'
-                            : 'none',
-                      }}
-                    >
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="rounded-lg flex items-center justify-center text-xs font-bold shrink-0"
-                            style={{
-                              width: 36,
-                              height: 36,
-                              backgroundColor: B_LIGHT,
-                              color: B_DARK,
-                            }}
-                          >
-                            {auxiliar.nombreCompleto
-                              .split(' ')
-                              .slice(0, 2)
-                              .map((nombre) => nombre.charAt(0))
-                              .join('')}
-                          </div>
+                <p
+                  className="text-sm"
+                  style={{ color: '#8fa0b8' }}
+                >
+                  Cargando auxiliares...
+                </p>
 
-                          <div>
+                <style>
+                  {`
+                    @keyframes spin {
+                      to {
+                        transform: rotate(360deg);
+                      }
+                    }
+                  `}
+                </style>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr>
+                      {[
+                        'Auxiliar',
+                        'Código SISS',
+                        'Horario',
+                        'Estado',
+                        'Acciones',
+                      ].map((columna) => (
+                        <th
+                          key={columna}
+                          className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide"
+                          style={{
+                            color: '#8fa0b8',
+                            backgroundColor: '#fafbfd',
+                            fontSize: 11,
+                            borderBottom: '1px solid #e2e8f0',
+                          }}
+                        >
+                          {columna}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {auxiliaresFiltrados.map(
+                      (auxiliar, index) => (
+                        <tr
+                          key={auxiliar.id}
+                          style={{
+                            borderBottom:
+                              index <
+                              auxiliaresFiltrados.length - 1
+                                ? '1px solid #f0f4fb'
+                                : 'none',
+                          }}
+                        >
+                          {/* AUXILIAR */}
+                          <td className="px-5 py-4">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="rounded-lg flex items-center justify-center text-xs font-bold shrink-0"
+                                style={{
+                                  width: 36,
+                                  height: 36,
+                                  backgroundColor: B_LIGHT,
+                                  color: B_DARK,
+                                }}
+                              >
+                                {auxiliar.nombreCompleto
+                                  .split(' ')
+                                  .slice(0, 2)
+                                  .map((nombre) =>
+                                    nombre.charAt(0)
+                                  )
+                                  .join('')}
+                              </div>
+
+                              <div>
+                                <div
+                                  className="text-sm font-medium"
+                                  style={{ color: '#111827' }}
+                                >
+                                  {auxiliar.nombreCompleto}
+                                </div>
+
+                                <div
+                                  className="text-xs mt-0.5"
+                                  style={{ color: '#8fa0b8' }}
+                                >
+                                  {auxiliar.cargo}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* SISS */}
+                          <td className="px-5 py-4">
                             <div
                               className="text-sm font-medium"
                               style={{ color: '#111827' }}
                             >
-                              {auxiliar.nombreCompleto}
+                              {auxiliar.codigoSiss}
                             </div>
 
                             <div
                               className="text-xs mt-0.5"
                               style={{ color: '#8fa0b8' }}
                             >
-                              {auxiliar.cargo}
+                              Usuario de acceso
                             </div>
-                          </div>
-                        </div>
-                      </td>
+                          </td>
 
-                      <td className="px-5 py-4">
-                        <div
-                          className="text-sm font-medium"
-                          style={{ color: '#111827' }}
-                        >
-                          {auxiliar.codigoSiss}
-                        </div>
+                          {/* HORARIO */}
+                          <td
+                            className="px-5 py-4 text-sm"
+                            style={{ color: '#536076' }}
+                          >
+                            {auxiliar.horarioInicio} -{' '}
+                            {auxiliar.horarioFin}
+                          </td>
 
-                        <div
-                          className="text-xs mt-0.5"
+                          {/* ESTADO */}
+                          <td className="px-5 py-4">
+                            <span
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
+                              style={{
+                                backgroundColor: auxiliar.activo
+                                  ? '#f0fdf4'
+                                  : '#fef2f2',
+                                color: auxiliar.activo
+                                  ? '#166534'
+                                  : '#b91c1c',
+                              }}
+                            >
+                              <span
+                                className="rounded-full"
+                                style={{
+                                  width: 6,
+                                  height: 6,
+                                  backgroundColor:
+                                    auxiliar.activo
+                                      ? '#16a34a'
+                                      : '#dc2626',
+                                }}
+                              />
+
+                              {auxiliar.activo
+                                ? 'Activo'
+                                : 'Inactivo'}
+                            </span>
+                          </td>
+
+                          {/* ACCIONES */}
+                          <td className="px-5 py-4">
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  abrirEdicion(auxiliar)
+                                }
+                                disabled={
+                                  cambiandoEstadoId === auxiliar.id
+                                }
+                                className="px-3 py-1.5 rounded-lg text-xs font-medium"
+                                style={{
+                                  backgroundColor: B_LIGHT,
+                                  color: B_DARK,
+                                  border:
+                                    '1.5px solid #d1ddf5',
+                                  opacity:
+                                    cambiandoEstadoId ===
+                                    auxiliar.id
+                                      ? 0.6
+                                      : 1,
+                                }}
+                              >
+                                Editar
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  cambiarEstado(auxiliar)
+                                }
+                                disabled={
+                                  cambiandoEstadoId === auxiliar.id
+                                }
+                                className="px-3 py-1.5 rounded-lg text-xs font-medium"
+                                style={{
+                                  backgroundColor:
+                                    auxiliar.activo
+                                      ? '#fef2f2'
+                                      : '#f0fdf4',
+                                  color: auxiliar.activo
+                                    ? '#b91c1c'
+                                    : '#166534',
+                                  border: auxiliar.activo
+                                    ? '1.5px solid #fecaca'
+                                    : '1.5px solid #bbf7d0',
+                                  opacity:
+                                    cambiandoEstadoId ===
+                                    auxiliar.id
+                                      ? 0.6
+                                      : 1,
+                                }}
+                              >
+                                {cambiandoEstadoId ===
+                                auxiliar.id
+                                  ? 'Procesando...'
+                                  : auxiliar.activo
+                                    ? 'Desactivar'
+                                    : 'Activar'}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    )}
+
+                    {auxiliaresFiltrados.length === 0 && (
+                      <tr>
+                        <td
+                          colSpan={5}
+                          className="text-center px-5 py-14 text-sm"
                           style={{ color: '#8fa0b8' }}
                         >
-                          Usuario de acceso
-                        </div>
-                      </td>
-
-                      <td
-                        className="px-5 py-4 text-sm"
-                        style={{ color: '#536076' }}
-                      >
-                        {auxiliar.horarioInicio} -{' '}
-                        {auxiliar.horarioFin}
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <span
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
-                          style={{
-                            backgroundColor: auxiliar.activo
-                              ? '#f0fdf4'
-                              : '#fef2f2',
-                            color: auxiliar.activo
-                              ? '#166534'
-                              : '#b91c1c',
-                          }}
-                        >
-                          <span
-                            className="rounded-full"
-                            style={{
-                              width: 6,
-                              height: 6,
-                              backgroundColor: auxiliar.activo
-                                ? '#16a34a'
-                                : '#dc2626',
-                            }}
-                          />
-
-                          {auxiliar.activo
-                            ? 'Activo'
-                            : 'Inactivo'}
-                        </span>
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => abrirEdicion(auxiliar)}
-                            className="px-3 py-1.5 rounded-lg text-xs font-medium"
-                            style={{
-                              backgroundColor: B_LIGHT,
-                              color: B_DARK,
-                              border: '1.5px solid #d1ddf5',
-                            }}
-                          >
-                            Editar
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              cambiarEstado(auxiliar.id)
-                            }
-                            className="px-3 py-1.5 rounded-lg text-xs font-medium"
-                            style={{
-                              backgroundColor: auxiliar.activo
-                                ? '#fef2f2'
-                                : '#f0fdf4',
-                              color: auxiliar.activo
-                                ? '#b91c1c'
-                                : '#166534',
-                              border: auxiliar.activo
-                                ? '1.5px solid #fecaca'
-                                : '1.5px solid #bbf7d0',
-                            }}
-                          >
-                            {auxiliar.activo
-                              ? 'Desactivar'
-                              : 'Activar'}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-
-                  {auxiliaresFiltrados.length === 0 && (
-                    <tr>
-                      <td
-                        colSpan={5}
-                        className="text-center px-5 py-14 text-sm"
-                        style={{ color: '#8fa0b8' }}
-                      >
-                        No se encontraron auxiliares.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                          No se encontraron auxiliares.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       </main>
@@ -559,7 +697,8 @@ export default function AdminAuxiliaresScreen({
             className="bg-white rounded-xl w-full overflow-hidden"
             style={{
               maxWidth: 620,
-              boxShadow: '0 20px 50px rgba(15,23,42,0.18)',
+              boxShadow:
+                '0 20px 50px rgba(15,23,42,0.18)',
             }}
           >
             <div
@@ -587,6 +726,7 @@ export default function AdminAuxiliaresScreen({
               <button
                 type="button"
                 onClick={cerrarFormulario}
+                disabled={guardando}
                 className="text-xl"
                 style={{ color: '#8fa0b8' }}
               >
@@ -609,6 +749,7 @@ export default function AdminAuxiliaresScreen({
                       }
                       placeholder="Nombre completo del auxiliar"
                       style={inputBase}
+                      disabled={guardando}
                     />
                   </Campo>
                 </div>
@@ -625,6 +766,7 @@ export default function AdminAuxiliaresScreen({
                     }
                     placeholder="Ej. 202001823"
                     style={inputBase}
+                    disabled={guardando}
                   />
 
                   <p
@@ -647,18 +789,19 @@ export default function AdminAuxiliaresScreen({
                     }
                     placeholder="Ej. 8018935"
                     style={inputBase}
+                    disabled={guardando}
                   />
 
                   <p
                     className="text-xs mt-1"
                     style={{ color: '#8fa0b8' }}
                   >
-                    Será la contraseña inicial.
+                    Será la contraseña de acceso.
                   </p>
                 </Campo>
 
                 <div className="md:col-span-2">
-                  <Campo label="Cargo">
+                  <Campo label="Cargo *">
                     <input
                       type="text"
                       value={formulario.cargo}
@@ -669,6 +812,7 @@ export default function AdminAuxiliaresScreen({
                         })
                       }
                       style={inputBase}
+                      disabled={guardando}
                     />
                   </Campo>
                 </div>
@@ -684,6 +828,7 @@ export default function AdminAuxiliaresScreen({
                       })
                     }
                     style={inputBase}
+                    disabled={guardando}
                   />
                 </Campo>
 
@@ -698,6 +843,7 @@ export default function AdminAuxiliaresScreen({
                       })
                     }
                     style={inputBase}
+                    disabled={guardando}
                   />
                 </Campo>
 
@@ -731,8 +877,18 @@ export default function AdminAuxiliaresScreen({
                     className="text-xs"
                     style={{ color: '#8fa0b8' }}
                   >
-                    Usuario: Código SISS · Contraseña inicial: Carnet
+                    Usuario: Código SISS · Contraseña: Carnet
                   </p>
+
+                  {editandoId !== null && (
+                    <p
+                      className="text-xs mt-1"
+                      style={{ color: '#b45309' }}
+                    >
+                      Si modificas el carnet, también cambiará la
+                      contraseña de acceso del auxiliar.
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -746,11 +902,13 @@ export default function AdminAuxiliaresScreen({
                 <button
                   type="button"
                   onClick={cerrarFormulario}
+                  disabled={guardando}
                   className="px-4 py-2 rounded-lg text-sm font-medium"
                   style={{
                     color: '#536076',
                     border: '1.5px solid #cdd5e0',
                     backgroundColor: 'white',
+                    opacity: guardando ? 0.6 : 1,
                   }}
                 >
                   Cancelar
@@ -758,14 +916,18 @@ export default function AdminAuxiliaresScreen({
 
                 <button
                   type="submit"
+                  disabled={guardando}
                   className="px-4 py-2 rounded-lg text-sm font-semibold text-white"
                   style={{
                     background: `linear-gradient(135deg, ${B_DARK} 0%, ${B_MID} 100%)`,
+                    opacity: guardando ? 0.7 : 1,
                   }}
                 >
-                  {editandoId !== null
-                    ? 'Guardar cambios'
-                    : 'Registrar auxiliar'}
+                  {guardando
+                    ? 'Guardando...'
+                    : editandoId !== null
+                      ? 'Guardar cambios'
+                      : 'Registrar auxiliar'}
                 </button>
               </div>
             </form>

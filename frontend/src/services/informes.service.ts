@@ -38,6 +38,7 @@ export interface IncidenciaPayload {
 }
 
 export interface CrearInformePayload {
+  fecha: string;
   horarioInicio: string;
   horarioFin: string;
   horarioModificado: boolean;

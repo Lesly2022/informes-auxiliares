@@ -1,5 +1,11 @@
+import { useEffect, useState } from 'react';
 import AdminSidebar from '../../components/AdminSidebar';
 import type { AdminScreen } from '../../types';
+import {
+  obtenerAdminInformePorId,
+  formatearFechaAdmin,
+  type AdminInformeDetalle,
+} from '../../services/admin.service';
 
 interface Props {
   informeId: string;
@@ -7,227 +13,9 @@ interface Props {
   onLogout: () => void;
 }
 
-interface ActividadAcademicaAdmin {
-  sala: string;
-  docente: string;
-  materia: string;
-  horario: string;
-  observaciones: string;
-}
-
-interface IncidenciaAdmin {
-  equipo: string;
-  descripcion: string;
-  accion: string;
-}
-
-interface InformeDetalleAdmin {
-  id: number;
-  fecha: string;
-  auxiliar: string;
-  codigoSiss: string;
-  cargo: string;
-  horarioInicio: string;
-  horarioFin: string;
-  actividadesAcademicas: ActividadAcademicaAdmin[];
-  actividadesLaboratorio: string[];
-  incidencias: IncidenciaAdmin[];
-  pendientes: string[];
-  estadoRecomendacion: string;
-  estado: 'GUARDADO';
-}
-
 const B_DARK = '#1a3d7c';
 const B_MID = '#2554a8';
 const B_LIGHT = '#eef4ff';
-
-/*
- * DATOS TEMPORALES DEL FRONTEND
- *
- * Más adelante serán reemplazados por:
- * GET /api/admin/informes/:id
- */
-const informesDetalle: InformeDetalleAdmin[] = [
-  {
-    id: 1,
-    fecha: '2026-09-20',
-    auxiliar: 'José Alejandro Montaño Laura',
-    codigoSiss: '202001823',
-    cargo: 'Auxiliar de Laboratorio de Cómputo',
-    horarioInicio: '09:00',
-    horarioFin: '13:00',
-    actividadesAcademicas: [
-      {
-        sala: 'Laboratorio 1',
-        docente: 'Ing. María Rodríguez',
-        materia: 'Programación I',
-        horario: '09:00 - 10:30',
-        observaciones: 'La clase se desarrolló con normalidad.',
-      },
-      {
-        sala: 'Laboratorio 2',
-        docente: 'Ing. Carlos Fernández',
-        materia: 'Base de Datos I',
-        horario: '10:30 - 12:00',
-        observaciones: 'Se brindó apoyo durante la práctica de laboratorio.',
-      },
-    ],
-    actividadesLaboratorio: [
-      'Verificación del funcionamiento de los equipos.',
-      'Apoyo a estudiantes durante las prácticas.',
-      'Revisión del estado de los periféricos.',
-      'Organización de los laboratorios al finalizar las clases.',
-    ],
-    incidencias: [
-      {
-        equipo: 'PC-12',
-        descripcion: 'El equipo presentó problemas de conexión a la red.',
-        accion: 'Se verificó el cableado y se restableció la conexión.',
-      },
-    ],
-    pendientes: [
-      'Realizar seguimiento al equipo PC-12.',
-    ],
-    estadoRecomendacion:
-      'Se recomienda realizar una revisión preventiva de los equipos del Laboratorio 1.',
-    estado: 'GUARDADO',
-  },
-  {
-    id: 2,
-    fecha: '2026-09-20',
-    auxiliar: 'María Fernanda López',
-    codigoSiss: '202002145',
-    cargo: 'Auxiliar de Laboratorio de Cómputo',
-    horarioInicio: '13:00',
-    horarioFin: '17:00',
-    actividadesAcademicas: [
-      {
-        sala: 'Laboratorio 2',
-        docente: 'Lic. Ana María Vargas',
-        materia: 'Introducción a la Informática',
-        horario: '13:00 - 14:30',
-        observaciones: 'Clase desarrollada sin inconvenientes.',
-      },
-    ],
-    actividadesLaboratorio: [
-      'Encendido y verificación de equipos.',
-      'Asistencia a estudiantes.',
-      'Control de acceso al laboratorio.',
-    ],
-    incidencias: [],
-    pendientes: [],
-    estadoRecomendacion:
-      'Los laboratorios quedaron en condiciones normales de funcionamiento.',
-    estado: 'GUARDADO',
-  },
-  {
-    id: 3,
-    fecha: '2026-09-19',
-    auxiliar: 'Carlos Mendoza Rojas',
-    codigoSiss: '202003254',
-    cargo: 'Auxiliar de Laboratorio de Cómputo',
-    horarioInicio: '08:00',
-    horarioFin: '12:00',
-    actividadesAcademicas: [
-      {
-        sala: 'Laboratorio 1',
-        docente: 'Ing. Roberto Flores',
-        materia: 'Ingeniería de Software',
-        horario: '08:00 - 09:30',
-        observaciones: 'Se prepararon los equipos antes del ingreso del curso.',
-      },
-      {
-        sala: 'Laboratorio 3',
-        docente: 'Ing. Patricia Rojas',
-        materia: 'Sistemas de Información',
-        horario: '10:00 - 11:30',
-        observaciones: 'Se brindó asistencia técnica durante la clase.',
-      },
-    ],
-    actividadesLaboratorio: [
-      'Revisión de equipos.',
-      'Preparación de laboratorios.',
-      'Asistencia técnica a docentes.',
-      'Control de estudiantes.',
-      'Apagado de equipos.',
-    ],
-    incidencias: [
-      {
-        equipo: 'PC-05',
-        descripcion: 'El teclado presentó fallas en algunas teclas.',
-        accion: 'Se reemplazó temporalmente el teclado.',
-      },
-    ],
-    pendientes: [
-      'Solicitar un teclado de reemplazo para PC-05.',
-    ],
-    estadoRecomendacion:
-      'Se recomienda sustituir definitivamente el teclado reportado.',
-    estado: 'GUARDADO',
-  },
-  {
-    id: 4,
-    fecha: '2026-09-19',
-    auxiliar: 'Andrea Vargas Flores',
-    codigoSiss: '202004321',
-    cargo: 'Auxiliar de Laboratorio de Cómputo',
-    horarioInicio: '14:00',
-    horarioFin: '18:00',
-    actividadesAcademicas: [
-      {
-        sala: 'Laboratorio 2',
-        docente: 'Ing. Marco Antonio Pérez',
-        materia: 'Redes',
-        horario: '14:00 - 16:00',
-        observaciones: 'La actividad académica se desarrolló normalmente.',
-      },
-    ],
-    actividadesLaboratorio: [
-      'Control del laboratorio.',
-      'Verificación de equipos al cierre del turno.',
-    ],
-    incidencias: [],
-    pendientes: [],
-    estadoRecomendacion: 'Sin recomendaciones adicionales.',
-    estado: 'GUARDADO',
-  },
-  {
-    id: 5,
-    fecha: '2026-09-18',
-    auxiliar: 'Luis Fernando Rocha',
-    codigoSiss: '202005678',
-    cargo: 'Auxiliar de Laboratorio de Cómputo',
-    horarioInicio: '09:00',
-    horarioFin: '13:00',
-    actividadesAcademicas: [
-      {
-        sala: 'Laboratorio 3',
-        docente: 'Ing. Daniela Molina',
-        materia: 'Programación II',
-        horario: '09:00 - 11:00',
-        observaciones: 'Se colaboró con la configuración del entorno de trabajo.',
-      },
-    ],
-    actividadesLaboratorio: [
-      'Preparación de equipos.',
-      'Apoyo durante clases.',
-      'Verificación de software.',
-      'Cierre del laboratorio.',
-    ],
-    incidencias: [],
-    pendientes: [
-      'Verificar la actualización del software en tres equipos.',
-    ],
-    estadoRecomendacion:
-      'Completar la actualización del software pendiente.',
-    estado: 'GUARDADO',
-  },
-];
-
-function formatearFecha(fecha: string) {
-  const [anio, mes, dia] = fecha.split('-');
-  return `${dia}/${mes}/${anio}`;
-}
 
 function Seccion({
   titulo,
@@ -266,11 +54,93 @@ export default function AdminVisualizarInformeScreen({
   onNavigate,
   onLogout,
 }: Props) {
-  const informe = informesDetalle.find(
-    (item) => item.id === Number(informeId),
-  );
+  const [informe, setInforme] = useState<AdminInformeDetalle | null>(null);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState('');
 
-  if (!informe) {
+  useEffect(() => {
+    const cargarInforme = async () => {
+      try {
+        setCargando(true);
+        setError('');
+
+        const data = await obtenerAdminInformePorId(informeId);
+
+        setInforme(data);
+      } catch (err) {
+        console.error('Error al cargar el informe:', err);
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : 'No se pudo cargar el informe seleccionado'
+        );
+
+        setInforme(null);
+      } finally {
+        setCargando(false);
+      }
+    };
+
+    cargarInforme();
+  }, [informeId]);
+
+  // ==========================================
+  // CARGANDO
+  // ==========================================
+
+  if (cargando) {
+    return (
+      <div
+        className="flex min-h-screen"
+        style={{ backgroundColor: '#f6f8fc' }}
+      >
+        <AdminSidebar
+          active="admin-informes"
+          onNavigate={onNavigate}
+          onLogout={onLogout}
+        />
+
+        <main className="flex-1 flex items-center justify-center p-8">
+          <div className="text-center">
+            <div
+              className="rounded-full mx-auto mb-4"
+              style={{
+                width: 34,
+                height: 34,
+                border: '3px solid #e2e8f0',
+                borderTopColor: B_DARK,
+                animation: 'spin 0.8s linear infinite',
+              }}
+            />
+
+            <p
+              className="text-sm font-medium"
+              style={{ color: '#5a6a82' }}
+            >
+              Cargando informe...
+            </p>
+
+            <style>
+              {`
+                @keyframes spin {
+                  to {
+                    transform: rotate(360deg);
+                  }
+                }
+              `}
+            </style>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // ==========================================
+  // ERROR / INFORME NO ENCONTRADO
+  // ==========================================
+
+  if (error || !informe) {
     return (
       <div
         className="flex min-h-screen"
@@ -284,6 +154,20 @@ export default function AdminVisualizarInformeScreen({
 
         <main className="flex-1 flex items-center justify-center p-8">
           <div className="bg-white border rounded-xl p-8 text-center max-w-md">
+            <div
+              className="rounded-xl flex items-center justify-center mx-auto mb-4"
+              style={{
+                width: 52,
+                height: 52,
+                backgroundColor: '#fef2f2',
+                color: '#b91c1c',
+                fontWeight: 700,
+                fontSize: 22,
+              }}
+            >
+              !
+            </div>
+
             <h2
               className="font-bold text-lg"
               style={{ color: '#172033' }}
@@ -295,7 +179,8 @@ export default function AdminVisualizarInformeScreen({
               className="text-sm mt-2 mb-5"
               style={{ color: '#7a8496' }}
             >
-              No se encontró información para el informe seleccionado.
+              {error ||
+                'No se encontró información para el informe seleccionado.'}
             </p>
 
             <button
@@ -311,6 +196,10 @@ export default function AdminVisualizarInformeScreen({
       </div>
     );
   }
+
+  // ==========================================
+  // INFORME
+  // ==========================================
 
   return (
     <div
@@ -413,21 +302,21 @@ export default function AdminVisualizarInformeScreen({
                     fontFamily: 'DM Sans, sans-serif',
                   }}
                 >
-                  {informe.auxiliar}
+                  {informe.usuario.nombreCompleto}
                 </div>
 
                 <div
                   className="text-sm mt-1"
                   style={{ color: '#5a6a82' }}
                 >
-                  {informe.cargo}
+                  {informe.usuario.cargo}
                 </div>
 
                 <div
                   className="text-xs mt-1"
                   style={{ color: '#8993a5' }}
                 >
-                  Código SISS: {informe.codigoSiss}
+                  Código SISS: {informe.usuario.codigoSiss || 'No registrado'}
                 </div>
               </div>
 
@@ -444,7 +333,7 @@ export default function AdminVisualizarInformeScreen({
                     className="text-sm font-semibold"
                     style={{ color: '#26354d' }}
                   >
-                    {formatearFecha(informe.fecha)}
+                    {formatearFechaAdmin(informe.fecha)}
                   </div>
                 </div>
 
@@ -462,6 +351,15 @@ export default function AdminVisualizarInformeScreen({
                   >
                     {informe.horarioInicio} - {informe.horarioFin}
                   </div>
+
+                  {informe.horarioModificado && (
+                    <div
+                      className="text-xs mt-1"
+                      style={{ color: '#b45309' }}
+                    >
+                      Horario modificado
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -488,7 +386,9 @@ export default function AdminVisualizarInformeScreen({
                       }}
                     />
 
-                    Guardado
+                    {informe.estado === 'GUARDADO'
+                      ? 'Guardado'
+                      : informe.estado}
                   </span>
                 </div>
               </div>
@@ -507,10 +407,20 @@ export default function AdminVisualizarInformeScreen({
                 </p>
               ) : (
                 <div className="flex flex-col gap-4">
-                  {informe.actividadesAcademicas.map(
-                    (actividad, index) => (
+                  {informe.actividadesAcademicas.map((actividad) => {
+                    const nombreDocente =
+                      actividad.docente?.nombreCompleto ||
+                      actividad.docenteOtro ||
+                      'No registrado';
+
+                    const nombreMateria =
+                      actividad.materia?.nombre ||
+                      actividad.materiaOtra ||
+                      'No registrada';
+
+                    return (
                       <div
-                        key={index}
+                        key={actividad.id}
                         className="rounded-lg border p-4"
                         style={{
                           borderColor: '#e5eaf2',
@@ -546,7 +456,7 @@ export default function AdminVisualizarInformeScreen({
                               className="text-sm font-semibold"
                               style={{ color: '#26354d' }}
                             >
-                              {actividad.docente}
+                              {nombreDocente}
                             </div>
                           </div>
 
@@ -562,7 +472,7 @@ export default function AdminVisualizarInformeScreen({
                               className="text-sm font-semibold"
                               style={{ color: '#26354d' }}
                             >
-                              {actividad.materia}
+                              {nombreMateria}
                             </div>
                           </div>
 
@@ -578,7 +488,8 @@ export default function AdminVisualizarInformeScreen({
                               className="text-sm font-semibold"
                               style={{ color: '#26354d' }}
                             >
-                              {actividad.horario}
+                              {actividad.horarioInicio} -{' '}
+                              {actividad.horarioFin}
                             </div>
                           </div>
                         </div>
@@ -604,8 +515,8 @@ export default function AdminVisualizarInformeScreen({
                           </div>
                         )}
                       </div>
-                    ),
-                  )}
+                    );
+                  })}
                 </div>
               )}
             </Seccion>
@@ -624,7 +535,7 @@ export default function AdminVisualizarInformeScreen({
                   {informe.actividadesLaboratorio.map(
                     (actividad, index) => (
                       <div
-                        key={index}
+                        key={actividad.id}
                         className="flex items-start gap-3 rounded-lg px-4 py-3"
                         style={{ backgroundColor: '#fafbfd' }}
                       >
@@ -644,10 +555,10 @@ export default function AdminVisualizarInformeScreen({
                           className="text-sm pt-0.5"
                           style={{ color: '#536076' }}
                         >
-                          {actividad}
+                          {actividad.descripcion}
                         </span>
                       </div>
-                    ),
+                    )
                   )}
                 </div>
               )}
@@ -664,9 +575,9 @@ export default function AdminVisualizarInformeScreen({
                 </p>
               ) : (
                 <div className="flex flex-col gap-4">
-                  {informe.incidencias.map((incidencia, index) => (
+                  {informe.incidencias.map((incidencia) => (
                     <div
-                      key={index}
+                      key={incidencia.id}
                       className="rounded-lg border p-4"
                       style={{ borderColor: '#e5eaf2' }}
                     >
@@ -730,9 +641,9 @@ export default function AdminVisualizarInformeScreen({
                 </p>
               ) : (
                 <ul className="flex flex-col gap-2">
-                  {informe.pendientes.map((pendiente, index) => (
+                  {informe.pendientes.map((pendiente) => (
                     <li
-                      key={index}
+                      key={pendiente.id}
                       className="flex items-start gap-3 text-sm"
                       style={{ color: '#536076' }}
                     >
@@ -745,7 +656,7 @@ export default function AdminVisualizarInformeScreen({
                         }}
                       />
 
-                      {pendiente}
+                      {pendiente.descripcion}
                     </li>
                   ))}
                 </ul>

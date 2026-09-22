@@ -3,13 +3,13 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 
-import docentesRoutes from './routes/docentes.routes';
-import materiasRoutes from './routes/materias.routes';
-import authRoutes from './routes/auth.routes';
-import perfilRoutes from './routes/perfil.routes';
-import informesRoutes from './routes/informes.routes';
-import adminRoutes from './routes/admin.routes';
-import salasRoutes from './routes/salas.routes';
+import docentesRoutes from './routes/docentes.routes.js';
+import materiasRoutes from './routes/materias.routes.js';
+import authRoutes from './routes/auth.routes.js';
+import perfilRoutes from './routes/perfil.routes.js';
+import informesRoutes from './routes/informes.routes.js';
+import adminRoutes from './routes/admin.routes.js';
+import salasRoutes from './routes/salas.routes.js';
 
 dotenv.config();
 const app = express();

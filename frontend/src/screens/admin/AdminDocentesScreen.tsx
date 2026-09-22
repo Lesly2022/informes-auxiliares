@@ -1,57 +1,70 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import AdminSidebar from '../../components/AdminSidebar';
 import type { AdminScreen } from '../../types';
+import {
+  obtenerAdminDocentes,
+  crearAdminDocente,
+  actualizarAdminDocente,
+  cambiarEstadoAdminDocente,
+  type AdminDocente,
+} from '../../services/admin.service';
 
 interface Props {
   onNavigate: (screen: AdminScreen) => void;
   onLogout: () => void;
 }
 
-interface Docente {
-  id: number;
-  nombreCompleto: string;
-  activo: boolean;
-}
-
 const B_DARK = '#1a3d7c';
 const B_MID = '#2554a8';
 const B_LIGHT = '#e8eef8';
-
-const docentesIniciales: Docente[] = [
-  {
-    id: 1,
-    nombreCompleto: 'Juan Carlos Rodríguez',
-    activo: true,
-  },
-  {
-    id: 2,
-    nombreCompleto: 'María Elena Vargas',
-    activo: true,
-  },
-  {
-    id: 3,
-    nombreCompleto: 'Luis Alberto Fernández',
-    activo: true,
-  },
-  {
-    id: 4,
-    nombreCompleto: 'Patricia Mendoza',
-    activo: false,
-  },
-];
 
 export default function AdminDocentesScreen({
   onNavigate,
   onLogout,
 }: Props) {
-  const [docentes, setDocentes] =
-    useState<Docente[]>(docentesIniciales);
-
+  const [docentes, setDocentes] = useState<AdminDocente[]>([]);
   const [busqueda, setBusqueda] = useState('');
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [editandoId, setEditandoId] = useState<number | null>(null);
   const [nombreCompleto, setNombreCompleto] = useState('');
+
   const [mensaje, setMensaje] = useState('');
+  const [mensajeExito, setMensajeExito] = useState('');
+
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const [cambiandoEstadoId, setCambiandoEstadoId] =
+    useState<number | null>(null);
+
+  // ==========================================
+  // CARGAR DOCENTES
+  // ==========================================
+
+  const cargarDocentes = async () => {
+    try {
+      setCargando(true);
+      setMensaje('');
+
+      const data = await obtenerAdminDocentes();
+      setDocentes(data);
+    } catch (error) {
+      setMensaje(
+        error instanceof Error
+          ? error.message
+          : 'No se pudieron cargar los docentes'
+      );
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarDocentes();
+  }, []);
+
+  // ==========================================
+  // FILTRAR
+  // ==========================================
 
   const docentesFiltrados = useMemo(() => {
     const texto = busqueda.trim().toLowerCase();
@@ -61,35 +74,58 @@ export default function AdminDocentesScreen({
     }
 
     return docentes.filter((docente) =>
-      docente.nombreCompleto.toLowerCase().includes(texto),
+      docente.nombreCompleto.toLowerCase().includes(texto)
     );
   }, [docentes, busqueda]);
+
+  const activos = docentes.filter(
+    (docente) => docente.activo
+  ).length;
+
+  const inactivos = docentes.length - activos;
+
+  // ==========================================
+  // MODAL
+  // ==========================================
 
   const abrirNuevo = () => {
     setNombreCompleto('');
     setEditandoId(null);
     setMensaje('');
+    setMensajeExito('');
     setMostrarFormulario(true);
   };
 
-  const abrirEdicion = (docente: Docente) => {
+  const abrirEdicion = (docente: AdminDocente) => {
     setNombreCompleto(docente.nombreCompleto);
     setEditandoId(docente.id);
     setMensaje('');
+    setMensajeExito('');
     setMostrarFormulario(true);
   };
 
   const cerrarFormulario = () => {
+    if (guardando) {
+      return;
+    }
+
     setNombreCompleto('');
     setEditandoId(null);
     setMensaje('');
     setMostrarFormulario(false);
   };
 
-  const guardarDocente = (e: React.FormEvent) => {
+  // ==========================================
+  // CREAR / EDITAR
+  // ==========================================
+
+  const guardarDocente = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const nombre = nombreCompleto.trim();
+
+    setMensaje('');
+    setMensajeExito('');
 
     if (!nombre) {
       setMensaje('Ingresa el nombre completo del docente.');
@@ -98,9 +134,9 @@ export default function AdminDocentesScreen({
 
     const repetido = docentes.some(
       (docente) =>
-        docente.nombreCompleto.toLowerCase() ===
+        docente.nombreCompleto.trim().toLowerCase() ===
           nombre.toLowerCase() &&
-        docente.id !== editandoId,
+        docente.id !== editandoId
     );
 
     if (repetido) {
@@ -108,47 +144,91 @@ export default function AdminDocentesScreen({
       return;
     }
 
-    if (editandoId !== null) {
-      setDocentes((actuales) =>
-        actuales.map((docente) =>
-          docente.id === editandoId
-            ? {
-                ...docente,
-                nombreCompleto: nombre,
-              }
-            : docente,
-        ),
+    try {
+      setGuardando(true);
+
+      if (editandoId !== null) {
+        const actualizado = await actualizarAdminDocente(
+          editandoId,
+          nombre
+        );
+
+        setDocentes((actuales) =>
+          actuales
+            .map((docente) =>
+              docente.id === actualizado.id
+                ? actualizado
+                : docente
+            )
+            .sort((a, b) =>
+              a.nombreCompleto.localeCompare(b.nombreCompleto)
+            )
+        );
+
+        setMensajeExito('Docente actualizado correctamente.');
+      } else {
+        const nuevo = await crearAdminDocente(nombre);
+
+        setDocentes((actuales) =>
+          [...actuales, nuevo].sort((a, b) =>
+            a.nombreCompleto.localeCompare(b.nombreCompleto)
+          )
+        );
+
+        setMensajeExito('Docente registrado correctamente.');
+      }
+
+      setMostrarFormulario(false);
+      setEditandoId(null);
+      setNombreCompleto('');
+    } catch (error) {
+      setMensaje(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo guardar el docente'
       );
-    } else {
-      const nuevoDocente: Docente = {
-        id:
-          docentes.length > 0
-            ? Math.max(...docentes.map((docente) => docente.id)) + 1
-            : 1,
-        nombreCompleto: nombre,
-        activo: true,
-      };
-
-      setDocentes((actuales) => [
-        nuevoDocente,
-        ...actuales,
-      ]);
+    } finally {
+      setGuardando(false);
     }
-
-    cerrarFormulario();
   };
 
-  const cambiarEstado = (id: number) => {
-    setDocentes((actuales) =>
-      actuales.map((docente) =>
-        docente.id === id
-          ? {
-              ...docente,
-              activo: !docente.activo,
-            }
-          : docente,
-      ),
-    );
+  // ==========================================
+  // ACTIVAR / DESACTIVAR
+  // ==========================================
+
+  const cambiarEstado = async (docente: AdminDocente) => {
+    const nuevoEstado = !docente.activo;
+
+    try {
+      setCambiandoEstadoId(docente.id);
+      setMensaje('');
+      setMensajeExito('');
+
+      const actualizado = await cambiarEstadoAdminDocente(
+        docente.id,
+        nuevoEstado
+      );
+
+      setDocentes((actuales) =>
+        actuales.map((item) =>
+          item.id === actualizado.id ? actualizado : item
+        )
+      );
+
+      setMensajeExito(
+        nuevoEstado
+          ? 'Docente activado correctamente.'
+          : 'Docente desactivado correctamente.'
+      );
+    } catch (error) {
+      setMensaje(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo cambiar el estado del docente'
+      );
+    } finally {
+      setCambiandoEstadoId(null);
+    }
   };
 
   const inputBase: React.CSSProperties = {
@@ -162,12 +242,6 @@ export default function AdminDocentesScreen({
     outline: 'none',
     fontFamily: 'Inter, sans-serif',
   };
-
-  const activos = docentes.filter(
-    (docente) => docente.activo,
-  ).length;
-
-  const inactivos = docentes.length - activos;
 
   return (
     <div className="flex" style={{ minHeight: '100vh' }}>
@@ -217,14 +291,40 @@ export default function AdminDocentesScreen({
               boxShadow: '0 2px 8px rgba(37,84,168,0.28)',
             }}
           >
-            <span style={{ fontSize: 18, lineHeight: 1 }}>
-              +
-            </span>
+            <span style={{ fontSize: 18, lineHeight: 1 }}>+</span>
             Nuevo docente
           </button>
         </header>
 
         <div className="flex-1 px-8 py-6">
+          {/* MENSAJE DE ÉXITO */}
+          {mensajeExito && (
+            <div
+              className="rounded-lg px-4 py-3 text-sm mb-5"
+              style={{
+                backgroundColor: '#f0fdf4',
+                color: '#166534',
+                border: '1px solid #bbf7d0',
+              }}
+            >
+              {mensajeExito}
+            </div>
+          )}
+
+          {/* ERROR GENERAL */}
+          {mensaje && !mostrarFormulario && (
+            <div
+              className="rounded-lg px-4 py-3 text-sm mb-5"
+              style={{
+                backgroundColor: '#fef2f2',
+                color: '#b91c1c',
+                border: '1px solid #fecaca',
+              }}
+            >
+              {mensaje}
+            </div>
+          )}
+
           {/* RESUMEN */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
             <Resumen
@@ -232,15 +332,9 @@ export default function AdminDocentesScreen({
               valor={docentes.length}
             />
 
-            <Resumen
-              titulo="Activos"
-              valor={activos}
-            />
+            <Resumen titulo="Activos" valor={activos} />
 
-            <Resumen
-              titulo="Inactivos"
-              valor={inactivos}
-            />
+            <Resumen titulo="Inactivos" valor={inactivos} />
           </div>
 
           {/* BUSCADOR */}
@@ -295,170 +389,232 @@ export default function AdminDocentesScreen({
                 className="text-xs mt-0.5"
                 style={{ color: '#8fa0b8' }}
               >
-                {docentesFiltrados.length}{' '}
-                {docentesFiltrados.length === 1
-                  ? 'docente encontrado'
-                  : 'docentes encontrados'}
+                {cargando
+                  ? 'Cargando docentes...'
+                  : `${docentesFiltrados.length} ${
+                      docentesFiltrados.length === 1
+                        ? 'docente encontrado'
+                        : 'docentes encontrados'
+                    }`}
               </p>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr>
-                    {[
-                      'Docente',
-                      'Estado',
-                      'Acciones',
-                    ].map((columna) => (
-                      <th
-                        key={columna}
-                        className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide"
-                        style={{
-                          color: '#8fa0b8',
-                          backgroundColor: '#fafbfd',
-                          fontSize: 11,
-                          borderBottom: '1px solid #e2e8f0',
-                        }}
-                      >
-                        {columna}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
+            {cargando ? (
+              <div className="text-center px-5 py-14">
+                <div
+                  className="rounded-full mx-auto mb-3"
+                  style={{
+                    width: 30,
+                    height: 30,
+                    border: '3px solid #e2e8f0',
+                    borderTopColor: B_DARK,
+                    animation: 'spin 0.8s linear infinite',
+                  }}
+                />
 
-                <tbody>
-                  {docentesFiltrados.map((docente, index) => (
-                    <tr
-                      key={docente.id}
-                      style={{
-                        borderBottom:
-                          index < docentesFiltrados.length - 1
-                            ? '1px solid #f0f4fb'
-                            : 'none',
-                      }}
-                    >
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="rounded-lg flex items-center justify-center text-xs font-bold shrink-0"
-                            style={{
-                              width: 36,
-                              height: 36,
-                              backgroundColor: B_LIGHT,
-                              color: B_DARK,
-                            }}
-                          >
-                            {docente.nombreCompleto
-                              .split(' ')
-                              .slice(0, 2)
-                              .map((nombre) => nombre.charAt(0))
-                              .join('')}
-                          </div>
+                <p
+                  className="text-sm"
+                  style={{ color: '#8fa0b8' }}
+                >
+                  Cargando docentes...
+                </p>
 
-                          <div>
-                            <div
-                              className="text-sm font-medium"
-                              style={{ color: '#111827' }}
-                            >
-                              {docente.nombreCompleto}
-                            </div>
-
-                            <div
-                              className="text-xs mt-0.5"
-                              style={{ color: '#8fa0b8' }}
-                            >
-                              Docente
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <span
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
+                <style>
+                  {`
+                    @keyframes spin {
+                      to {
+                        transform: rotate(360deg);
+                      }
+                    }
+                  `}
+                </style>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr>
+                      {[
+                        'Docente',
+                        'Estado',
+                        'Acciones',
+                      ].map((columna) => (
+                        <th
+                          key={columna}
+                          className="text-left px-5 py-3 text-xs font-semibold uppercase tracking-wide"
                           style={{
-                            backgroundColor: docente.activo
-                              ? '#f0fdf4'
-                              : '#fef2f2',
-                            color: docente.activo
-                              ? '#166534'
-                              : '#b91c1c',
+                            color: '#8fa0b8',
+                            backgroundColor: '#fafbfd',
+                            fontSize: 11,
+                            borderBottom: '1px solid #e2e8f0',
                           }}
                         >
-                          <span
-                            className="rounded-full"
-                            style={{
-                              width: 6,
-                              height: 6,
-                              backgroundColor: docente.activo
-                                ? '#16a34a'
-                                : '#dc2626',
-                            }}
-                          />
-
-                          {docente.activo
-                            ? 'Activo'
-                            : 'Inactivo'}
-                        </span>
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => abrirEdicion(docente)}
-                            className="px-3 py-1.5 rounded-lg text-xs font-medium"
-                            style={{
-                              backgroundColor: B_LIGHT,
-                              color: B_DARK,
-                              border: '1.5px solid #d1ddf5',
-                            }}
-                          >
-                            Editar
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              cambiarEstado(docente.id)
-                            }
-                            className="px-3 py-1.5 rounded-lg text-xs font-medium"
-                            style={{
-                              backgroundColor: docente.activo
-                                ? '#fef2f2'
-                                : '#f0fdf4',
-                              color: docente.activo
-                                ? '#b91c1c'
-                                : '#166534',
-                              border: docente.activo
-                                ? '1.5px solid #fecaca'
-                                : '1.5px solid #bbf7d0',
-                            }}
-                          >
-                            {docente.activo
-                              ? 'Desactivar'
-                              : 'Activar'}
-                          </button>
-                        </div>
-                      </td>
+                          {columna}
+                        </th>
+                      ))}
                     </tr>
-                  ))}
+                  </thead>
 
-                  {docentesFiltrados.length === 0 && (
-                    <tr>
-                      <td
-                        colSpan={3}
-                        className="text-center px-5 py-14 text-sm"
-                        style={{ color: '#8fa0b8' }}
-                      >
-                        No se encontraron docentes.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                  <tbody>
+                    {docentesFiltrados.map(
+                      (docente, index) => (
+                        <tr
+                          key={docente.id}
+                          style={{
+                            borderBottom:
+                              index <
+                              docentesFiltrados.length - 1
+                                ? '1px solid #f0f4fb'
+                                : 'none',
+                          }}
+                        >
+                          <td className="px-5 py-4">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="rounded-lg flex items-center justify-center text-xs font-bold shrink-0"
+                                style={{
+                                  width: 36,
+                                  height: 36,
+                                  backgroundColor: B_LIGHT,
+                                  color: B_DARK,
+                                }}
+                              >
+                                {docente.nombreCompleto
+                                  .split(' ')
+                                  .slice(0, 2)
+                                  .map((nombre) =>
+                                    nombre.charAt(0)
+                                  )
+                                  .join('')}
+                              </div>
+
+                              <div>
+                                <div
+                                  className="text-sm font-medium"
+                                  style={{ color: '#111827' }}
+                                >
+                                  {docente.nombreCompleto}
+                                </div>
+
+                                <div
+                                  className="text-xs mt-0.5"
+                                  style={{ color: '#8fa0b8' }}
+                                >
+                                  Docente
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="px-5 py-4">
+                            <span
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
+                              style={{
+                                backgroundColor: docente.activo
+                                  ? '#f0fdf4'
+                                  : '#fef2f2',
+                                color: docente.activo
+                                  ? '#166534'
+                                  : '#b91c1c',
+                              }}
+                            >
+                              <span
+                                className="rounded-full"
+                                style={{
+                                  width: 6,
+                                  height: 6,
+                                  backgroundColor: docente.activo
+                                    ? '#16a34a'
+                                    : '#dc2626',
+                                }}
+                              />
+
+                              {docente.activo
+                                ? 'Activo'
+                                : 'Inactivo'}
+                            </span>
+                          </td>
+
+                          <td className="px-5 py-4">
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  abrirEdicion(docente)
+                                }
+                                disabled={
+                                  cambiandoEstadoId === docente.id
+                                }
+                                className="px-3 py-1.5 rounded-lg text-xs font-medium"
+                                style={{
+                                  backgroundColor: B_LIGHT,
+                                  color: B_DARK,
+                                  border:
+                                    '1.5px solid #d1ddf5',
+                                  opacity:
+                                    cambiandoEstadoId ===
+                                    docente.id
+                                      ? 0.6
+                                      : 1,
+                                }}
+                              >
+                                Editar
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  cambiarEstado(docente)
+                                }
+                                disabled={
+                                  cambiandoEstadoId === docente.id
+                                }
+                                className="px-3 py-1.5 rounded-lg text-xs font-medium"
+                                style={{
+                                  backgroundColor:
+                                    docente.activo
+                                      ? '#fef2f2'
+                                      : '#f0fdf4',
+                                  color: docente.activo
+                                    ? '#b91c1c'
+                                    : '#166534',
+                                  border: docente.activo
+                                    ? '1.5px solid #fecaca'
+                                    : '1.5px solid #bbf7d0',
+                                  opacity:
+                                    cambiandoEstadoId ===
+                                    docente.id
+                                      ? 0.6
+                                      : 1,
+                                }}
+                              >
+                                {cambiandoEstadoId === docente.id
+                                  ? 'Procesando...'
+                                  : docente.activo
+                                    ? 'Desactivar'
+                                    : 'Activar'}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    )}
+
+                    {docentesFiltrados.length === 0 && (
+                      <tr>
+                        <td
+                          colSpan={3}
+                          className="text-center px-5 py-14 text-sm"
+                          style={{ color: '#8fa0b8' }}
+                        >
+                          No se encontraron docentes.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       </main>
@@ -505,6 +661,7 @@ export default function AdminDocentesScreen({
               <button
                 type="button"
                 onClick={cerrarFormulario}
+                disabled={guardando}
                 className="text-xl"
                 style={{ color: '#8fa0b8' }}
               >
@@ -529,6 +686,7 @@ export default function AdminDocentesScreen({
                   }
                   placeholder="Nombre completo del docente"
                   style={inputBase}
+                  disabled={guardando}
                 />
 
                 {mensaje && (
@@ -571,11 +729,13 @@ export default function AdminDocentesScreen({
                 <button
                   type="button"
                   onClick={cerrarFormulario}
+                  disabled={guardando}
                   className="px-4 py-2 rounded-lg text-sm font-medium"
                   style={{
                     color: '#536076',
                     border: '1.5px solid #cdd5e0',
                     backgroundColor: 'white',
+                    opacity: guardando ? 0.6 : 1,
                   }}
                 >
                   Cancelar
@@ -583,14 +743,18 @@ export default function AdminDocentesScreen({
 
                 <button
                   type="submit"
+                  disabled={guardando}
                   className="px-4 py-2 rounded-lg text-sm font-semibold text-white"
                   style={{
                     background: `linear-gradient(135deg, ${B_DARK} 0%, ${B_MID} 100%)`,
+                    opacity: guardando ? 0.7 : 1,
                   }}
                 >
-                  {editandoId !== null
-                    ? 'Guardar cambios'
-                    : 'Registrar docente'}
+                  {guardando
+                    ? 'Guardando...'
+                    : editandoId !== null
+                      ? 'Guardar cambios'
+                      : 'Registrar docente'}
                 </button>
               </div>
             </form>
