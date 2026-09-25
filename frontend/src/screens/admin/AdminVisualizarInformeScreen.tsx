@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import AdminSidebar from '../../components/AdminSidebar';
+import Footer from '../../components/Footer';
 import type { AdminScreen } from '../../types';
 import {
   obtenerAdminInformePorId,
@@ -250,7 +251,7 @@ export default function AdminVisualizarInformeScreen({
                 className="text-xs"
                 style={{ color: '#8993a5' }}
               >
-                Laboratorio de Cómputo
+                Laboratorio de Informática y Sistemas
               </div>
             </div>
           </div>
@@ -693,7 +694,9 @@ export default function AdminVisualizarInformeScreen({
               Volver a informes
             </button>
           </div>
-        </div>
+                </div>
+
+        <Footer />
       </main>
     </div>
   );

@@ -7,6 +7,7 @@ import {
   HORARIO_TURNO_DEFAULT,
 } from '../data';
 import Sidebar from '../components/Sidebar';
+import Footer from '../components/Footer';
 import {
   crearInforme,
   actualizarInforme,
@@ -21,6 +22,11 @@ import {
   type Docente,
   type Materia,
 } from '../services/catalogos.service';
+import {
+  obtenerPerfil,
+  type Perfil,
+  type DiaSemana,
+} from '../services/perfil.service';
 
 interface Props {
   onNavigate: (s: Screen, id?: string) => void;
@@ -162,6 +168,25 @@ export default function InformeFormScreen({ onNavigate, onLogout, editReportId }
   return `${year}-${month}-${day}`;
 };
 
+const obtenerDiaSemana = (fechaTexto: string): DiaSemana | null => {
+  if (!fechaTexto) return null;
+
+  // Usamos mediodía para evitar desplazamientos de fecha por zona horaria.
+  const fechaLocal = new Date(`${fechaTexto}T12:00:00`);
+
+  const dias: Array<DiaSemana | null> = [
+    null, // domingo
+    'LUNES',
+    'MARTES',
+    'MIERCOLES',
+    'JUEVES',
+    'VIERNES',
+    'SABADO',
+  ];
+
+  return dias[fechaLocal.getDay()];
+};
+
 const [fecha, setFecha] = useState(obtenerFechaBolivia);
   const [horarioCambiado, setHorarioCambiado] = useState(false);
   const [horarioOtro, setHorarioOtro] = useState('');
@@ -176,13 +201,46 @@ const [fecha, setFecha] = useState(obtenerFechaBolivia);
   const [guardando, setGuardando] = useState(false);
   const [errorGuardado, setErrorGuardado] = useState('');
   const [nombreUsuario, setNombreUsuario] = useState(USUARIO.nombre);
+  const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [cargandoEdicion, setCargandoEdicion] = useState(false);
   const [salas, setSalas] = useState<Sala[]>([]);
   const [docentes, setDocentes] = useState<Docente[]>([]);
   const [materias, setMaterias] = useState<Materia[]>([]);
   const [catalogosCargados, setCatalogosCargados] = useState(false);
 
-  const horarioEfectivo = horarioCambiado ? horarioOtro : HORARIO_TURNO_DEFAULT;
+  const diaSeleccionado = obtenerDiaSemana(fecha);
+
+  const turnoSeleccionado =
+    diaSeleccionado && perfil
+      ? perfil.turnos.find(
+          (turno) => turno.dia === diaSeleccionado
+        )
+      : undefined;
+
+  const horarioTurno =
+    turnoSeleccionado
+      ? `${turnoSeleccionado.horarioInicio} - ${turnoSeleccionado.horarioFin}`
+      : perfil?.horarioInicio && perfil?.horarioFin
+        ? `${perfil.horarioInicio} - ${perfil.horarioFin}`
+        : HORARIO_TURNO_DEFAULT;
+
+  const horarioEfectivo =
+    horarioCambiado ? horarioOtro : horarioTurno;
+
+  useEffect(() => {
+    const cargarPerfil = async () => {
+      try {
+        const perfilData = await obtenerPerfil();
+
+        setPerfil(perfilData);
+        setNombreUsuario(perfilData.nombreCompleto);
+      } catch (error) {
+        console.error('Error al cargar el perfil:', error);
+      }
+    };
+
+    cargarPerfil();
+  }, []);
   useEffect(() => {
   const cargarCatalogos = async () => {
     try {
@@ -651,7 +709,7 @@ useEffect(() => {
                         fontFamily: 'DM Sans, sans-serif',
                       }}
                     >
-                      {HORARIO_TURNO_DEFAULT}
+                      {horarioTurno}
                     </span>
                     {!horarioCambiado && (
                       <span
@@ -1014,7 +1072,9 @@ useEffect(() => {
                 ? 'Guardar cambios'
                 : 'Guardar informe'}
           </button>
-        </div>
+                </div>
+
+        <Footer />
       </main>
 
       {showConfirm && <ConfirmModal onCancel={() => setShowConfirm(false)} onConfirm={handleConfirm} isEdit={isEdit} />}

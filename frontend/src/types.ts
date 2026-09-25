@@ -52,7 +52,8 @@ export type Screen =
   | 'admin-auxiliares'
   | 'admin-docentes'
   | 'admin-salas'
-  | 'admin-materias';
+  | 'admin-materias'
+  | 'admin-imprimir';
 
 export type AdminScreen =
   | 'admin-dashboard'
@@ -61,4 +62,5 @@ export type AdminScreen =
   | 'admin-auxiliares'
   | 'admin-docentes'
   | 'admin-salas'
-  | 'admin-materias';
+  | 'admin-materias'
+  | 'admin-imprimir';

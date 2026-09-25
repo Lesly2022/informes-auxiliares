@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import AdminSidebar from '../../components/AdminSidebar';
+import Footer from '../../components/Footer';
 import type { AdminScreen } from '../../types';
 import {
   obtenerAdminAuxiliares,
@@ -41,6 +42,8 @@ export default function AdminInformesScreen({
   const [mes, setMes] = useState('');
   const [anio, setAnio] = useState('');
   const [auxiliarId, setAuxiliarId] = useState('');
+  const [fechaDesde, setFechaDesde] = useState('');
+  const [fechaHasta, setFechaHasta] = useState('');
 
   const [informes, setInformes] = useState<AdminInformeResumen[]>([]);
   const [auxiliares, setAuxiliares] = useState<AdminAuxiliar[]>([]);
@@ -178,6 +181,28 @@ export default function AdminInformesScreen({
     setAuxiliarId('');
   };
 
+  const abrirImpresion = () => {
+      if (!fechaDesde || !fechaHasta) {
+        return;
+      }
+
+      if (fechaDesde > fechaHasta) {
+        alert('La fecha inicial no puede ser posterior a la fecha final.');
+        return;
+      }
+
+      localStorage.setItem('adminPrintFechaDesde', fechaDesde);
+      localStorage.setItem('adminPrintFechaHasta', fechaHasta);
+
+      if (auxiliarId) {
+        localStorage.setItem('adminPrintAuxiliarId', auxiliarId);
+      } else {
+        localStorage.removeItem('adminPrintAuxiliarId');
+      }
+
+      onNavigate('admin-imprimir');
+    };
+
   const inputBase: React.CSSProperties = {
     border: '1.5px solid #cdd5e0',
     backgroundColor: '#f8fafc',
@@ -241,7 +266,7 @@ export default function AdminInformesScreen({
               className="text-xs"
               style={{ color: '#8993a5' }}
             >
-              Laboratorio de Cómputo
+              Laboratorio de Informática y Sistemas
             </div>
           </div>
         </header>
@@ -423,6 +448,87 @@ export default function AdminInformesScreen({
                 Para filtrar por mes, selecciona también el año.
               </p>
             )}
+
+            {/* IMPRESIÓN POR RANGO */}
+            <div
+              className="mt-5 pt-5"
+              style={{
+                borderTop: '1px solid #e2e8f0',
+              }}
+            >
+              <div className="flex items-end justify-between gap-4 flex-wrap">
+                <div>
+                  <h3
+                    className="text-sm font-semibold"
+                    style={{ color: '#111827' }}
+                  >
+                    Imprimir informes
+                  </h3>
+
+                  <p
+                    className="text-xs mt-1"
+                    style={{ color: '#8fa0b8' }}
+                  >
+                    Selecciona un rango de fechas para imprimir los informes.
+                  </p>
+                </div>
+
+                <div className="flex items-end gap-3 flex-wrap">
+                  {/* FECHA DESDE */}
+                  <div className="flex flex-col gap-1">
+                    <label
+                      className="text-xs font-medium"
+                      style={{ color: '#5a6a82' }}
+                    >
+                      Fecha desde
+                    </label>
+
+                    <input
+                      type="date"
+                      value={fechaDesde}
+                      onChange={(e) => setFechaDesde(e.target.value)}
+                      style={inputBase}
+                    />
+                  </div>
+
+                  {/* FECHA HASTA */}
+                  <div className="flex flex-col gap-1">
+                    <label
+                      className="text-xs font-medium"
+                      style={{ color: '#5a6a82' }}
+                    >
+                      Fecha hasta
+                    </label>
+
+                    <input
+                      type="date"
+                      value={fechaHasta}
+                      onChange={(e) => setFechaHasta(e.target.value)}
+                      style={inputBase}
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={abrirImpresion}
+                    disabled={!fechaDesde || !fechaHasta}
+                    className="px-4 py-2 rounded-lg text-xs font-semibold text-white"
+                    style={{
+                      backgroundColor:
+                        fechaDesde && fechaHasta ? B_DARK : '#94a3b8',
+                      minHeight: 36,
+                      cursor:
+                        fechaDesde && fechaHasta
+                          ? 'pointer'
+                          : 'not-allowed',
+                    }}
+                  >
+                    Imprimir informes
+                  </button>
+                </div>
+              </div>
+            </div>
+
           </div>
 
           {/* TABLA */}
@@ -579,7 +685,6 @@ export default function AdminInformesScreen({
                         'Fecha',
                         'Auxiliar',
                         'Horario del turno',
-                        'Actividades',
                         'Estado',
                         'Acción',
                       ].map((col) => (
@@ -726,20 +831,6 @@ export default function AdminInformesScreen({
                           )}
                         </td>
 
-                        {/* ACTIVIDADES */}
-                        <td className="px-5 py-4">
-                          <span
-                            className="px-2.5 py-1 rounded-full text-xs font-medium"
-                            style={{
-                              backgroundColor: '#f1f4f9',
-                              color: '#5a6a82',
-                            }}
-                            title="El resumen del backend no incluye el número de actividades"
-                          >
-                            —
-                          </span>
-                        </td>
-
                         {/* ESTADO */}
                         <td className="px-5 py-4">
                           <span
@@ -824,7 +915,9 @@ export default function AdminInformesScreen({
               {informes.length === 1 ? 'informe' : 'informes'} encontrados
             </p>
           )}
-        </div>
+                </div>
+
+        <Footer />
       </main>
     </div>
   );

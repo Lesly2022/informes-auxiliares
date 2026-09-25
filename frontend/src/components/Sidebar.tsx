@@ -78,9 +78,9 @@ export default function Sidebar({ active, onNavigate, onLogout }: SidebarProps) 
           </div>
           <div>
             <div className="text-white font-semibold text-sm leading-tight" style={{ fontFamily: 'DM Sans, sans-serif' }}>
-              Informes Diarios
+              SILAB - Sistema de Informes de Laboratorio
             </div>
-            <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11 }}>Lab. Cómputo · UMSS</div>
+            <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11 }}>Lab. Inf-Sis · UMSS</div>
           </div>
         </div>
       </div>

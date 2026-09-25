@@ -1,12 +1,31 @@
+export type DiaSemana =
+  | 'LUNES'
+  | 'MARTES'
+  | 'MIERCOLES'
+  | 'JUEVES'
+  | 'VIERNES'
+  | 'SABADO';
+
+export interface TurnoAuxiliar {
+  id: number;
+  dia: DiaSemana;
+  horarioInicio: string;
+  horarioFin: string;
+}
+
 export interface Perfil {
   id: number;
   codigoSiss: string;
   nombreCompleto: string;
   cargo: string;
   rol: string;
+
+  // Se mantienen temporalmente como respaldo
   horarioInicio: string;
   horarioFin: string;
+
   activo: boolean;
+  turnos: TurnoAuxiliar[];
 }
 
 const API_URL = 'http://localhost:3000/api';

@@ -24,9 +24,25 @@ router.get('/', verificarToken, async (req: AuthRequest, res) => {
         nombreCompleto: true,
         cargo: true,
         rol: true,
+
+        // Horario anterior: se mantiene temporalmente como respaldo
         horarioInicio: true,
         horarioFin: true,
+
         activo: true,
+
+        // Nuevos turnos del auxiliar
+        turnos: {
+          select: {
+            id: true,
+            dia: true,
+            horarioInicio: true,
+            horarioFin: true,
+          },
+          orderBy: {
+            id: 'asc',
+          },
+        },
       },
     });
 

@@ -14,20 +14,65 @@ import AdminAuxiliaresScreen from './screens/admin/AdminAuxiliaresScreen';
 import AdminDocentesScreen from './screens/admin/AdminDocentesScreen';
 import AdminSalasScreen from './screens/admin/AdminSalasScreen';
 import AdminVisualizarInformeScreen from './screens/admin/AdminVisualizarInformeScreen';
+import AdminImprimirInformesScreen from './screens/admin/AdminImprimirInformesScreen';
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>('login');
+  const [screen, setScreen] = useState<Screen>(() => {
+      const token = localStorage.getItem('token');
+      const usuarioGuardado = localStorage.getItem('usuario');
+      const pantallaGuardada = localStorage.getItem('screen') as Screen | null;
+
+      if (!token || !usuarioGuardado) {
+        return 'login';
+      }
+
+      try {
+        const usuario = JSON.parse(usuarioGuardado);
+
+        if (pantallaGuardada) {
+          const esPantallaAdmin = pantallaGuardada.startsWith('admin-');
+
+          if (usuario.rol === 'ADMIN' && esPantallaAdmin) {
+            return pantallaGuardada;
+          }
+
+          if (
+            usuario.rol === 'AUXILIAR' &&
+            !esPantallaAdmin &&
+            pantallaGuardada !== 'login'
+          ) {
+            return pantallaGuardada;
+          }
+        }
+
+        if (usuario.rol === 'ADMIN') {
+          return 'admin-dashboard';
+        }
+
+        if (usuario.rol === 'AUXILIAR') {
+          return 'dashboard';
+        }
+
+        return 'login';
+      } catch {
+        localStorage.removeItem('token');
+        localStorage.removeItem('usuario');
+        localStorage.removeItem('screen');
+        return 'login';
+      }
+    });
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const navigate = (s: Screen, id?: string) => {
-    setScreen(s);
+      setScreen(s);
+      localStorage.setItem('screen', s);
 
-    if (id !== undefined) {
-      setSelectedId(id);
-    }
+      if (id !== undefined) {
+        setSelectedId(id);
+      }
 
-    window.scrollTo(0, 0);
-  };
+      window.scrollTo(0, 0);
+    };
 
   const navigateAdmin = (screen: AdminScreen, id?: string) => {
     navigate(screen, id);
@@ -36,6 +81,7 @@ export default function App() {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('usuario');
+    localStorage.removeItem('screen');
 
     setScreen('login');
     setSelectedId(null);
@@ -126,6 +172,14 @@ export default function App() {
     case 'admin-informes':
       return (
         <AdminInformesScreen
+          onNavigate={navigateAdmin}
+          onLogout={handleLogout}
+        />
+      );
+    
+    case 'admin-imprimir':
+      return (
+        <AdminImprimirInformesScreen
           onNavigate={navigateAdmin}
           onLogout={handleLogout}
         />

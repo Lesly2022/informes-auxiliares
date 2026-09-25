@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import AdminSidebar from '../../components/AdminSidebar';
+import Footer from '../../components/Footer';
 import type { AdminScreen } from '../../types';
 import {
   obtenerAdminAuxiliares,
@@ -24,8 +25,108 @@ const formularioVacio: AdminAuxiliarFormulario = {
   codigoSiss: '',
   carnet: '',
   cargo: 'Auxiliar de Laboratorio de Cómputo',
-  horarioInicio: '',
-  horarioFin: '',
+  turnos: [],
+};
+
+const DIAS_SEMANA = [
+  { valor: 'LUNES', etiqueta: 'Lunes' },
+  { valor: 'MARTES', etiqueta: 'Martes' },
+  { valor: 'MIERCOLES', etiqueta: 'Miércoles' },
+  { valor: 'JUEVES', etiqueta: 'Jueves' },
+  { valor: 'VIERNES', etiqueta: 'Viernes' },
+  { valor: 'SABADO', etiqueta: 'Sábado' },
+] as const;
+
+const CARGOS_AUXILIAR = [
+  'Administrador de Lab. de Cómputo',
+  'Auxiliar de Terminal de Cómputo',
+  'Administrador de Lab. de Desarrollo',
+  'Auxiliar de Lab. de Desarrollo',
+  'Administrador de Lab. de Mantenimiento de Software',
+  'Auxiliar de Lab. de Mantenimiento de Software',
+  'Administrador de Lab. de Mantenimiento de Hardware',
+  'Auxiliar de Lab. de Mantenimiento de Hardware',
+] as const;
+
+const ordenarTurnos = (
+  turnos: AdminAuxiliarFormulario['turnos']
+) => {
+  const orden = DIAS_SEMANA.map((dia) => dia.valor);
+
+  return [...turnos].sort(
+    (a, b) =>
+      orden.indexOf(a.dia) - orden.indexOf(b.dia)
+  );
+};
+
+const obtenerTurnosAgrupados = (auxiliar: AdminAuxiliar) => {
+  const turnos = ordenarTurnos(
+    auxiliar.turnos && auxiliar.turnos.length > 0
+      ? auxiliar.turnos
+      : DIAS_SEMANA.map((dia) => ({
+          dia: dia.valor,
+          horarioInicio: auxiliar.horarioInicio,
+          horarioFin: auxiliar.horarioFin,
+        }))
+  );
+
+  const grupos = new Map<
+    string,
+    {
+      dias: string[];
+      horarioInicio: string;
+      horarioFin: string;
+    }
+  >();
+
+  turnos.forEach((turno) => {
+    const clave = `${turno.horarioInicio}-${turno.horarioFin}`;
+
+    const grupo = grupos.get(clave);
+
+    if (grupo) {
+      grupo.dias.push(turno.dia);
+    } else {
+      grupos.set(clave, {
+        dias: [turno.dia],
+        horarioInicio: turno.horarioInicio,
+        horarioFin: turno.horarioFin,
+      });
+    }
+  });
+
+  return Array.from(grupos.values()).map((grupo) => {
+    const indices = grupo.dias
+      .map((dia) =>
+        DIAS_SEMANA.findIndex((item) => item.valor === dia)
+      )
+      .sort((a, b) => a - b);
+
+    const sonConsecutivos = indices.every(
+      (indice, posicion) =>
+        posicion === 0 ||
+        indice === indices[posicion - 1] + 1
+    );
+
+    let textoDias = '';
+
+    if (indices.length > 1 && sonConsecutivos) {
+      const primero = DIAS_SEMANA[indices[0]].etiqueta;
+      const ultimo =
+        DIAS_SEMANA[indices[indices.length - 1]].etiqueta;
+
+      textoDias = `${primero} a ${ultimo}`;
+    } else {
+      textoDias = indices
+        .map((indice) => DIAS_SEMANA[indice].etiqueta)
+        .join(', ');
+    }
+
+    return {
+      ...grupo,
+      textoDias,
+    };
+  });
 };
 
 export default function AdminAuxiliaresScreen({
@@ -45,6 +146,10 @@ export default function AdminAuxiliaresScreen({
 
   const [formulario, setFormulario] =
     useState<AdminAuxiliarFormulario>(formularioVacio);
+  const [diasSeleccionados, setDiasSeleccionados] = useState<string[]>([]);
+  const [nuevoHorarioInicio, setNuevoHorarioInicio] = useState('');
+  const [nuevoHorarioFin, setNuevoHorarioFin] = useState('');
+  const [diaEditandoTurno, setDiaEditandoTurno] = useState<string | null>(null);
 
   // ==========================================
   // CARGAR AUXILIARES REALES
@@ -97,6 +202,9 @@ export default function AdminAuxiliaresScreen({
 
   const abrirNuevoAuxiliar = () => {
     setFormulario(formularioVacio);
+    setDiasSeleccionados([]);
+    setNuevoHorarioInicio('');
+    setNuevoHorarioFin('');
     setEditandoId(null);
     setMensaje('');
     setMensajeExito('');
@@ -109,8 +217,18 @@ export default function AdminAuxiliaresScreen({
       codigoSiss: auxiliar.codigoSiss,
       carnet: auxiliar.carnet,
       cargo: auxiliar.cargo,
-      horarioInicio: auxiliar.horarioInicio,
-      horarioFin: auxiliar.horarioFin,
+
+      // Si ya tiene turnos nuevos, utilizamos esos.
+      // Si todavía no los tiene (como José), conservamos
+      // temporalmente su horario anterior de lunes a sábado.
+      turnos:
+      auxiliar.turnos && auxiliar.turnos.length > 0
+        ? ordenarTurnos(auxiliar.turnos)
+        : DIAS_SEMANA.map((dia) => ({
+            dia: dia.valor,
+            horarioInicio: auxiliar.horarioInicio,
+            horarioFin: auxiliar.horarioFin,
+          })),
     });
 
     setEditandoId(auxiliar.id);
@@ -127,6 +245,9 @@ export default function AdminAuxiliaresScreen({
     setMostrarFormulario(false);
     setEditandoId(null);
     setFormulario(formularioVacio);
+    setDiasSeleccionados([]);
+    setNuevoHorarioInicio('');
+    setNuevoHorarioFin('');
     setMensaje('');
   };
 
@@ -134,83 +255,214 @@ export default function AdminAuxiliaresScreen({
   // GUARDAR / EDITAR
   // ==========================================
 
-  const guardarAuxiliar = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    setMensaje('');
-    setMensajeExito('');
-
-    const datos: AdminAuxiliarFormulario = {
-      nombreCompleto: formulario.nombreCompleto.trim(),
-      codigoSiss: formulario.codigoSiss.trim(),
-      carnet: formulario.carnet.trim(),
-      cargo: formulario.cargo.trim(),
-      horarioInicio: formulario.horarioInicio,
-      horarioFin: formulario.horarioFin,
-    };
-
-    if (
-      !datos.nombreCompleto ||
-      !datos.codigoSiss ||
-      !datos.carnet ||
-      !datos.cargo ||
-      !datos.horarioInicio ||
-      !datos.horarioFin
-    ) {
-      setMensaje('Completa todos los campos obligatorios.');
-      return;
-    }
-
-    if (datos.horarioInicio >= datos.horarioFin) {
-      setMensaje(
-        'La hora de inicio debe ser anterior a la hora de finalización.'
-      );
-      return;
-    }
-
-    try {
-      setGuardando(true);
-
-      if (editandoId !== null) {
-        const actualizado = await actualizarAdminAuxiliar(
-          editandoId,
-          datos
-        );
-
-        setAuxiliares((actuales) =>
-          actuales.map((auxiliar) =>
-            auxiliar.id === actualizado.id
-              ? actualizado
-              : auxiliar
-          )
-        );
-
-        setMensajeExito('Auxiliar actualizado correctamente.');
-      } else {
-        const nuevo = await crearAdminAuxiliar(datos);
-
-        setAuxiliares((actuales) =>
-          [...actuales, nuevo].sort((a, b) =>
-            a.nombreCompleto.localeCompare(b.nombreCompleto)
-          )
-        );
-
-        setMensajeExito('Auxiliar registrado correctamente.');
-      }
-
-      setMostrarFormulario(false);
-      setEditandoId(null);
-      setFormulario(formularioVacio);
-    } catch (err) {
-      setMensaje(
-        err instanceof Error
-          ? err.message
-          : 'No se pudo guardar el auxiliar'
-      );
-    } finally {
-      setGuardando(false);
-    }
+  const alternarDia = (dia: string) => {
+    setDiasSeleccionados((actuales) =>
+      actuales.includes(dia)
+        ? actuales.filter((item) => item !== dia)
+        : [...actuales, dia]
+    );
   };
+
+  const agregarTurnos = () => {
+    setMensaje('');
+
+    if (diasSeleccionados.length === 0) {
+      setMensaje('Selecciona al menos un día.');
+      return;
+    }
+
+    if (!nuevoHorarioInicio || !nuevoHorarioFin) {
+      setMensaje('Completa la hora de inicio y finalización.');
+      return;
+    }
+
+    if (nuevoHorarioInicio >= nuevoHorarioFin) {
+      setMensaje('La hora de inicio debe ser anterior a la hora de finalización.');
+      return;
+    }
+
+    const nuevosTurnos = diasSeleccionados.map((dia) => ({
+      dia: dia as AdminAuxiliarFormulario['turnos'][number]['dia'],
+      horarioInicio: nuevoHorarioInicio,
+      horarioFin: nuevoHorarioFin,
+    }));
+
+    // Si alguno de esos días ya estaba configurado,
+    // reemplazamos su horario en lugar de duplicarlo.
+    const turnosSinDiasRepetidos = formulario.turnos.filter(
+      (turno) => !diasSeleccionados.includes(turno.dia)
+    );
+
+    setFormulario({
+      ...formulario,
+      turnos: ordenarTurnos([
+        ...turnosSinDiasRepetidos,
+        ...nuevosTurnos,
+      ]),
+    });
+
+    setDiasSeleccionados([]);
+    setNuevoHorarioInicio('');
+    setNuevoHorarioFin('');
+  };
+
+  const eliminarTurno = (dia: string) => {
+    setFormulario({
+      ...formulario,
+      turnos: formulario.turnos.filter((turno) => turno.dia !== dia),
+    });
+  };
+
+const editarTurno = (
+  turno: AdminAuxiliarFormulario['turnos'][number]
+) => {
+  setDiaEditandoTurno(turno.dia);
+  setDiasSeleccionados([turno.dia]);
+  setNuevoHorarioInicio(turno.horarioInicio);
+  setNuevoHorarioFin(turno.horarioFin);
+  setMensaje('');
+};
+
+const guardarEdicionTurno = () => {
+  setMensaje('');
+
+  if (!diaEditandoTurno) {
+    return;
+  }
+
+  if (!nuevoHorarioInicio || !nuevoHorarioFin) {
+    setMensaje('Completa la hora de inicio y finalización.');
+    return;
+  }
+
+  if (nuevoHorarioInicio >= nuevoHorarioFin) {
+    setMensaje(
+      'La hora de inicio debe ser anterior a la hora de finalización.'
+    );
+    return;
+  }
+
+  setFormulario({
+    ...formulario,
+    turnos: ordenarTurnos(
+      formulario.turnos.map((turno) =>
+        turno.dia === diaEditandoTurno
+          ? {
+              ...turno,
+              horarioInicio: nuevoHorarioInicio,
+              horarioFin: nuevoHorarioFin,
+            }
+          : turno
+      )
+    ),
+  });
+
+  setDiaEditandoTurno(null);
+  setDiasSeleccionados([]);
+  setNuevoHorarioInicio('');
+  setNuevoHorarioFin('');
+};
+
+const cancelarEdicionTurno = () => {
+  setDiaEditandoTurno(null);
+  setDiasSeleccionados([]);
+  setNuevoHorarioInicio('');
+  setNuevoHorarioFin('');
+  setMensaje('');
+};
+
+  const guardarAuxiliar = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  setMensaje('');
+  setMensajeExito('');
+  if (diaEditandoTurno) {
+  setMensaje(
+    'Tienes un turno en edición. Guarda o cancela los cambios del turno antes de guardar el auxiliar.'
+  );
+  return;
+}
+
+  const datos: AdminAuxiliarFormulario = {
+    nombreCompleto: formulario.nombreCompleto.trim(),
+    codigoSiss: formulario.codigoSiss.trim(),
+    carnet: formulario.carnet.trim(),
+    cargo: formulario.cargo.trim(),
+    turnos: formulario.turnos,
+  };
+
+  if (
+    !datos.nombreCompleto ||
+    !datos.codigoSiss ||
+    !datos.carnet ||
+    !datos.cargo
+  ) {
+    setMensaje('Completa todos los campos obligatorios.');
+    return;
+  }
+
+  if (datos.turnos.length === 0) {
+    setMensaje('Debes registrar al menos un turno para el auxiliar.');
+    return;
+  }
+
+  const existeTurnoInvalido = datos.turnos.some(
+    (turno) =>
+      !turno.horarioInicio ||
+      !turno.horarioFin ||
+      turno.horarioInicio >= turno.horarioFin
+  );
+
+  if (existeTurnoInvalido) {
+    setMensaje('Revisa los horarios configurados.');
+    return;
+  }
+
+  try {
+    setGuardando(true);
+
+    if (editandoId !== null) {
+      const actualizado = await actualizarAdminAuxiliar(
+        editandoId,
+        datos
+      );
+
+      setAuxiliares((actuales) =>
+        actuales.map((auxiliar) =>
+          auxiliar.id === actualizado.id ? actualizado : auxiliar
+        )
+      );
+
+      setMensajeExito('Auxiliar actualizado correctamente.');
+    } else {
+      const nuevo = await crearAdminAuxiliar(datos);
+
+      setAuxiliares((actuales) =>
+        [...actuales, nuevo].sort((a, b) =>
+          a.nombreCompleto.localeCompare(b.nombreCompleto)
+        )
+      );
+
+      setMensajeExito('Auxiliar registrado correctamente.');
+    }
+
+    setMostrarFormulario(false);
+    setEditandoId(null);
+    setFormulario(formularioVacio);
+    setDiasSeleccionados([]);
+    setNuevoHorarioInicio('');
+    setNuevoHorarioFin('');
+    setDiaEditandoTurno(null);
+  } catch (err) {
+    setMensaje(
+      err instanceof Error
+        ? err.message
+        : 'No se pudo guardar el auxiliar'
+    );
+  } finally {
+    setGuardando(false);
+  }
+};
 
   // ==========================================
   // ACTIVAR / DESACTIVAR
@@ -469,7 +721,7 @@ export default function AdminAuxiliaresScreen({
                       {[
                         'Auxiliar',
                         'Código SISS',
-                        'Horario',
+                        'Turnos',
                         'Estado',
                         'Acciones',
                       ].map((columna) => (
@@ -558,13 +810,29 @@ export default function AdminAuxiliaresScreen({
                             </div>
                           </td>
 
-                          {/* HORARIO */}
+                          {/* TURNOS */}
                           <td
-                            className="px-5 py-4 text-sm"
+                            className="px-5 py-4"
                             style={{ color: '#536076' }}
                           >
-                            {auxiliar.horarioInicio} -{' '}
-                            {auxiliar.horarioFin}
+                            <div className="flex flex-col gap-1">
+                              {obtenerTurnosAgrupados(auxiliar).map((grupo) => (
+                                <div
+                                  key={`${grupo.textoDias}-${grupo.horarioInicio}-${grupo.horarioFin}`}
+                                  className="text-xs"
+                                >
+                                  <span
+                                    className="font-semibold"
+                                    style={{ color: '#374151' }}
+                                  >
+                                    {grupo.textoDias}:
+                                  </span>{' '}
+                                  <span style={{ color: '#536076' }}>
+                                    {grupo.horarioInicio} - {grupo.horarioFin}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
                           </td>
 
                           {/* ESTADO */}
@@ -682,6 +950,7 @@ export default function AdminAuxiliaresScreen({
             )}
           </div>
         </div>
+        <Footer />
       </main>
 
       {/* MODAL */}
@@ -694,9 +963,10 @@ export default function AdminAuxiliaresScreen({
           }}
         >
           <div
-            className="bg-white rounded-xl w-full overflow-hidden"
+            className="bg-white rounded-xl w-full overflow-y-auto"
             style={{
               maxWidth: 620,
+              maxHeight: '90vh',
               boxShadow:
                 '0 20px 50px rgba(15,23,42,0.18)',
             }}
@@ -802,8 +1072,7 @@ export default function AdminAuxiliaresScreen({
 
                 <div className="md:col-span-2">
                   <Campo label="Cargo *">
-                    <input
-                      type="text"
+                    <select
                       value={formulario.cargo}
                       onChange={(e) =>
                         setFormulario({
@@ -813,41 +1082,231 @@ export default function AdminAuxiliaresScreen({
                       }
                       style={inputBase}
                       disabled={guardando}
-                    />
+                    >
+                      <option value="">Selecciona un cargo</option>
+
+                      {CARGOS_AUXILIAR.map((cargo) => (
+                        <option key={cargo} value={cargo}>
+                          {cargo}
+                        </option>
+                      ))}
+                    </select>
                   </Campo>
                 </div>
 
-                <Campo label="Horario de inicio *">
-                  <input
-                    type="time"
-                    value={formulario.horarioInicio}
-                    onChange={(e) =>
-                      setFormulario({
-                        ...formulario,
-                        horarioInicio: e.target.value,
-                      })
-                    }
-                    style={inputBase}
-                    disabled={guardando}
-                  />
-                </Campo>
+                  <div className="md:col-span-2">
+                <div
+                  className="rounded-xl p-4"
+                  style={{
+                    backgroundColor: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                  }}
+                >
+                  <div className="mb-4">
+                    <div
+                      className="text-sm font-semibold"
+                      style={{ color: '#111827' }}
+                    >
+                      Turnos del auxiliar *
+                    </div>
 
-                <Campo label="Horario de finalización *">
-                  <input
-                    type="time"
-                    value={formulario.horarioFin}
-                    onChange={(e) =>
-                      setFormulario({
-                        ...formulario,
-                        horarioFin: e.target.value,
-                      })
-                    }
-                    style={inputBase}
-                    disabled={guardando}
-                  />
-                </Campo>
+                    <p
+                      className="text-xs mt-1"
+                      style={{ color: '#8fa0b8' }}
+                    >
+                      Selecciona uno o varios días que compartan el mismo
+                      horario. Puedes agregar otro horario después.
+                    </p>
+                  </div>
 
-                {mensaje && (
+                  {/* DÍAS */}
+                  <div className="mb-4">
+                    <label
+                      className="text-xs font-medium block mb-2"
+                      style={{ color: '#536076' }}
+                    >
+                      Días de trabajo
+                    </label>
+
+                    <div className="flex flex-wrap gap-2">
+                      {DIAS_SEMANA.map((dia) => {
+                        const seleccionado = diasSeleccionados.includes(
+                          dia.valor
+                        );
+
+                        return (
+                          <button
+                            key={dia.valor}
+                            type="button"
+                            onClick={() => alternarDia(dia.valor)}
+                            disabled={guardando}
+                            className="px-3 py-2 rounded-lg text-xs font-medium"
+                            style={{
+                              backgroundColor: seleccionado
+                                ? B_DARK
+                                : 'white',
+                              color: seleccionado ? 'white' : '#536076',
+                              border: seleccionado
+                                ? `1.5px solid ${B_DARK}`
+                                : '1.5px solid #cdd5e0',
+                            }}
+                          >
+                            {dia.etiqueta}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* HORARIO */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <Campo label="Hora de inicio">
+                      <input
+                        type="time"
+                        value={nuevoHorarioInicio}
+                        onChange={(e) =>
+                          setNuevoHorarioInicio(e.target.value)
+                        }
+                        style={inputBase}
+                        disabled={guardando}
+                      />
+                    </Campo>
+
+                    <Campo label="Hora de finalización">
+                      <input
+                        type="time"
+                        value={nuevoHorarioFin}
+                        onChange={(e) =>
+                          setNuevoHorarioFin(e.target.value)
+                        }
+                        style={inputBase}
+                        disabled={guardando}
+                      />
+                    </Campo>
+                  </div>
+
+                  <div className="mt-3 flex items-center gap-2">
+                    {diaEditandoTurno ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={guardarEdicionTurno}
+                          disabled={guardando}
+                          className="px-4 py-2 rounded-lg text-xs font-semibold text-white"
+                          style={{
+                            backgroundColor: B_MID,
+                            border: `1.5px solid ${B_MID}`,
+                          }}
+                        >
+                          Guardar cambios
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={cancelarEdicionTurno}
+                          disabled={guardando}
+                          className="px-4 py-2 rounded-lg text-xs font-semibold"
+                          style={{
+                            backgroundColor: 'white',
+                            color: '#536076',
+                            border: '1.5px solid #d1d5db',
+                          }}
+                        >
+                          Cancelar
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={agregarTurnos}
+                        disabled={guardando}
+                        className="px-4 py-2 rounded-lg text-xs font-semibold"
+                        style={{
+                          backgroundColor: B_LIGHT,
+                          color: B_DARK,
+                          border: '1.5px solid #d1ddf5',
+                        }}
+                      >
+                        + Agregar turno
+                      </button>
+                    )}
+                  </div>
+
+                  {/* TURNOS CONFIGURADOS */}
+                  {formulario.turnos.length > 0 && (
+                    <div
+                      className="mt-4 pt-4"
+                      style={{ borderTop: '1px solid #e2e8f0' }}
+                    >
+                      <div
+                        className="text-xs font-semibold mb-2"
+                        style={{ color: '#536076' }}
+                      >
+                        Turnos configurados
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        {formulario.turnos.map((turno) => {
+                          const dia = DIAS_SEMANA.find(
+                            (item) => item.valor === turno.dia
+                          );
+
+                          return (
+                            <div
+                              key={turno.dia}
+                              className="flex items-center justify-between gap-3 rounded-lg px-3 py-2"
+                              style={{
+                                backgroundColor: 'white',
+                                border: '1px solid #e2e8f0',
+                              }}
+                            >
+                              <div>
+                                <span
+                                  className="text-xs font-semibold"
+                                  style={{ color: '#111827' }}
+                                >
+                                  {dia?.etiqueta ?? turno.dia}
+                                </span>
+
+                                <span
+                                  className="text-xs ml-3"
+                                  style={{ color: '#536076' }}
+                                >
+                                  {turno.horarioInicio} - {turno.horarioFin}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-3">
+                              <button
+                                type="button"
+                                onClick={() => editarTurno(turno)}
+                                disabled={guardando}
+                                className="text-xs font-medium"
+                                style={{ color: B_MID }}
+                              >
+                                Editar
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => eliminarTurno(turno.dia)}
+                                disabled={guardando}
+                                className="text-xs font-medium"
+                                style={{ color: '#b91c1c' }}
+                              >
+                                Quitar
+                              </button>
+                            </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+                 {mensaje && (
                   <div
                     className="md:col-span-2 rounded-lg px-4 py-3 text-xs"
                     style={{

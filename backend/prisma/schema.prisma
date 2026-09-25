@@ -19,6 +19,15 @@ enum EstadoInforme {
   REVISADO
 }
 
+enum DiaSemana {
+  LUNES
+  MARTES
+  MIERCOLES
+  JUEVES
+  VIERNES
+  SABADO
+}
+
 model Usuario {
   id             Int      @id @default(autoincrement())
   codigoSiss     String?  @unique
@@ -35,6 +44,21 @@ model Usuario {
   updatedAt      DateTime @updatedAt
 
   informes Informe[]
+  turnos TurnoAuxiliar[]
+}
+
+model TurnoAuxiliar {
+  id            Int      @id @default(autoincrement())
+  usuarioId     Int
+  dia           DiaSemana
+  horarioInicio String
+  horarioFin    String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
 }
 
 model Docente {

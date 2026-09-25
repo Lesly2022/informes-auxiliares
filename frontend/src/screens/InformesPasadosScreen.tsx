@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Screen } from '../types';
 import { formatFecha } from '../data';
 import Sidebar from '../components/Sidebar';
+import Footer from '../components/Footer';
 import {
   obtenerInformes,
   contarActividades,
@@ -681,7 +682,8 @@ export default function InformesPasadosScreen({
               encontrados
             </p>
           )}
-        </div>
+                </div>
+        <Footer />
       </main>
     </div>
   );

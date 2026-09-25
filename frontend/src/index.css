@@ -52,3 +52,26 @@ button, a { transition: all 0.15s ease; }
   .no-print { display: none !important; }
   body { background: white; }
 }
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+
+  .informe-impresion-multiple {
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .informe-documento {
+    width: 100%;
+    box-shadow: none !important;
+  }
+
+  .actividad-bloque,
+  .incidencia-bloque {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

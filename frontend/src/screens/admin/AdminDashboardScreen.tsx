@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import AdminSidebar from '../../components/AdminSidebar';
+import Footer from '../../components/Footer';
 import type { AdminScreen } from '../../types';
 import {
   obtenerAdminDashboard,
@@ -201,7 +202,7 @@ export default function AdminDashboardScreen({
                 className="text-sm mt-1"
                 style={{ color: '#7a8496' }}
               >
-                Gestión de informes y recursos del Laboratorio de Cómputo
+                Gestión de informes y recursos del Laboratorio de Informática y Sistemas
               </p>
             </div>
 
@@ -217,7 +218,7 @@ export default function AdminDashboardScreen({
                 className="text-xs"
                 style={{ color: '#8993a5' }}
               >
-                Laboratorio de Cómputo
+                Laboratorio de Informática y Sistemas
               </div>
             </div>
           </div>
@@ -344,10 +345,6 @@ export default function AdminDashboardScreen({
                     </th>
 
                     <th className="text-center text-xs font-semibold px-6 py-3">
-                      Actividades
-                    </th>
-
-                    <th className="text-right text-xs font-semibold px-6 py-3">
                       Acción
                     </th>
                   </tr>
@@ -357,7 +354,7 @@ export default function AdminDashboardScreen({
                   {loading ? (
                     <tr>
                       <td
-                        colSpan={5}
+                        colSpan={4}
                         className="px-6 py-10 text-center text-sm"
                         style={{ color: '#8993a5' }}
                       >
@@ -422,15 +419,7 @@ export default function AdminDashboardScreen({
                             {obtenerHorarioAdmin(informe)}
                           </td>
 
-                          <td
-                            className="px-6 py-4 text-sm text-center font-semibold"
-                            style={{ color: '#8993a5' }}
-                            title="El endpoint del dashboard no proporciona el conteo de actividades"
-                          >
-                            —
-                          </td>
-
-                          <td className="px-6 py-4 text-right">
+                          <td className="px-6 py-4 text-center">
                             <button
                               type="button"
                               onClick={() =>
@@ -454,7 +443,7 @@ export default function AdminDashboardScreen({
                   ) : (
                     <tr>
                       <td
-                        colSpan={5}
+                        colSpan={4}
                         className="px-6 py-10 text-center text-sm"
                         style={{ color: '#8993a5' }}
                       >
@@ -541,7 +530,9 @@ export default function AdminDashboardScreen({
               </button>
             </div>
           </section>
-        </div>
+                </div>
+
+        <Footer />
       </main>
     </div>
   );

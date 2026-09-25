@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../lib/prisma.js';
 import bcrypt from 'bcrypt';
+import { DiaSemana } from '@prisma/client';
 import {
   verificarToken,
   verificarAdmin,
@@ -31,15 +32,26 @@ router.get(
           rol: 'AUXILIAR',
         },
         select: {
-          id: true,
-          nombreCompleto: true,
-          codigoSiss: true,
-          carnet: true,
-          cargo: true,
-          horarioInicio: true,
-          horarioFin: true,
-          activo: true,
-        },
+            id: true,
+            nombreCompleto: true,
+            codigoSiss: true,
+            carnet: true,
+            cargo: true,
+            horarioInicio: true,
+            horarioFin: true,
+            activo: true,
+            turnos: {
+              select: {
+                id: true,
+                dia: true,
+                horarioInicio: true,
+                horarioFin: true,
+              },
+              orderBy: {
+                id: 'asc',
+              },
+            },
+          },
         orderBy: {
           nombreCompleto: 'asc',
         },
@@ -67,22 +79,47 @@ router.post(
         codigoSiss,
         carnet,
         cargo,
-        horarioInicio,
-        horarioFin,
+        turnos,
       } = req.body;
 
       if (
-        !nombreCompleto ||
-        !codigoSiss ||
-        !carnet ||
-        !cargo ||
-        !horarioInicio ||
-        !horarioFin
-      ) {
-        return res.status(400).json({
-          mensaje: 'Todos los campos son obligatorios',
-        });
-      }
+          !nombreCompleto ||
+          !codigoSiss ||
+          !carnet ||
+          !cargo ||
+          !Array.isArray(turnos) ||
+          turnos.length === 0
+        ) {
+          return res.status(400).json({
+            mensaje: 'Los datos del auxiliar y al menos un turno son obligatorios',
+          });
+        }
+
+        const diasValidos = [
+          'LUNES',
+          'MARTES',
+          'MIERCOLES',
+          'JUEVES',
+          'VIERNES',
+          'SABADO',
+        ];
+
+        const turnosInvalidos = turnos.some(
+          (turno: {
+            dia: string;
+            horarioInicio: string;
+            horarioFin: string;
+          }) =>
+            !diasValidos.includes(turno.dia) ||
+            !turno.horarioInicio ||
+            !turno.horarioFin
+        );
+
+        if (turnosInvalidos) {
+          return res.status(400).json({
+            mensaje: 'Uno o más turnos contienen datos inválidos',
+          });
+        }
 
       const auxiliarExistente = await prisma.usuario.findFirst({
         where: {
@@ -101,6 +138,8 @@ router.post(
 
       const passwordHash = await bcrypt.hash(carnet, 10);
 
+      const primerTurno = turnos[0];
+
       const auxiliar = await prisma.usuario.create({
         data: {
           nombreCompleto,
@@ -109,9 +148,26 @@ router.post(
           cargo,
           passwordHash,
           rol: 'AUXILIAR',
-          horarioInicio,
-          horarioFin,
+
+          // Compatibilidad temporal con el modelo anterior
+          horarioInicio: primerTurno.horarioInicio,
+          horarioFin: primerTurno.horarioFin,
+
           activo: true,
+
+          turnos: {
+            create: turnos.map(
+              (turno: {
+                dia: string;
+                horarioInicio: string;
+                horarioFin: string;
+              }) => ({
+                dia: turno.dia as DiaSemana,
+                horarioInicio: turno.horarioInicio,
+                horarioFin: turno.horarioFin,
+              })
+            ),
+          },
         },
         select: {
           id: true,
@@ -122,6 +178,17 @@ router.post(
           horarioInicio: true,
           horarioFin: true,
           activo: true,
+          turnos: {
+            select: {
+              id: true,
+              dia: true,
+              horarioInicio: true,
+              horarioFin: true,
+            },
+            orderBy: {
+              id: 'asc',
+            },
+          },
         },
       });
 
@@ -155,8 +222,7 @@ router.put(
         codigoSiss,
         carnet,
         cargo,
-        horarioInicio,
-        horarioFin,
+        turnos,
       } = req.body;
 
       if (
@@ -164,11 +230,37 @@ router.put(
         !codigoSiss ||
         !carnet ||
         !cargo ||
-        !horarioInicio ||
-        !horarioFin
+        !Array.isArray(turnos) ||
+        turnos.length === 0
       ) {
         return res.status(400).json({
-          mensaje: 'Todos los campos son obligatorios',
+          mensaje: 'Los datos del auxiliar y al menos un turno son obligatorios',
+        });
+      }
+
+      const diasValidos = [
+        'LUNES',
+        'MARTES',
+        'MIERCOLES',
+        'JUEVES',
+        'VIERNES',
+        'SABADO',
+      ];
+
+      const turnosInvalidos = turnos.some(
+        (turno: {
+          dia: string;
+          horarioInicio: string;
+          horarioFin: string;
+        }) =>
+          !diasValidos.includes(turno.dia) ||
+          !turno.horarioInicio ||
+          !turno.horarioFin
+      );
+
+      if (turnosInvalidos) {
+        return res.status(400).json({
+          mensaje: 'Uno o más turnos contienen datos inválidos',
         });
       }
 
@@ -203,30 +295,68 @@ router.put(
       }
 
       const passwordHash = await bcrypt.hash(carnet, 10);
+      const primerTurno = turnos[0];
 
-      const auxiliarActualizado = await prisma.usuario.update({
-        where: {
-          id,
-        },
-        data: {
-          nombreCompleto,
-          codigoSiss,
-          carnet,
-          cargo,
-          horarioInicio,
-          horarioFin,
-          passwordHash,
-        },
-        select: {
-          id: true,
-          nombreCompleto: true,
-          codigoSiss: true,
-          carnet: true,
-          cargo: true,
-          horarioInicio: true,
-          horarioFin: true,
-          activo: true,
-        },
+      const auxiliarActualizado = await prisma.$transaction(async (tx) => {
+        // Eliminamos la configuración anterior de turnos.
+        await tx.turnoAuxiliar.deleteMany({
+          where: {
+            usuarioId: id,
+          },
+        });
+
+        // Actualizamos los datos del auxiliar y creamos sus nuevos turnos.
+        return tx.usuario.update({
+          where: {
+            id,
+          },
+          data: {
+            nombreCompleto,
+            codigoSiss,
+            carnet,
+            cargo,
+            passwordHash,
+
+            // Compatibilidad temporal con el modelo anterior.
+            horarioInicio: primerTurno.horarioInicio,
+            horarioFin: primerTurno.horarioFin,
+
+            turnos: {
+              create: turnos.map(
+                (turno: {
+                  dia: string;
+                  horarioInicio: string;
+                  horarioFin: string;
+                }) => ({
+                  dia: turno.dia as DiaSemana,
+                  horarioInicio: turno.horarioInicio,
+                  horarioFin: turno.horarioFin,
+                })
+              ),
+            },
+          },
+          select: {
+            id: true,
+            nombreCompleto: true,
+            codigoSiss: true,
+            carnet: true,
+            cargo: true,
+            horarioInicio: true,
+            horarioFin: true,
+            activo: true,
+            turnos: {
+              select: {
+                id: true,
+                dia: true,
+                horarioInicio: true,
+                horarioFin: true,
+              },
+              orderBy: {
+                id: 'asc',
+              },
+            },
+          },
+        });
       });
 
       return res.json(auxiliarActualizado);
@@ -834,7 +964,7 @@ router.get(
   verificarAdmin,
   async (req: AuthRequest, res) => {
     try {
-      const { auxiliarId, fecha, mes, anio } = req.query;
+      const {auxiliarId, fecha, mes, anio, fechaDesde, fechaHasta,} = req.query;
 
       const where: any = {};
 
@@ -865,6 +995,42 @@ router.get(
         where.fecha = {
           gte: fechaInicio,
           lte: fechaFin,
+        };
+      }
+
+      // FILTRO POR RANGO DE FECHAS
+      if (fechaDesde || fechaHasta) {
+        if (!fechaDesde || !fechaHasta) {
+          return res.status(400).json({
+            mensaje: 'Debe indicar la fecha inicial y la fecha final',
+          });
+        }
+
+        const inicio = new Date(`${fechaDesde}T00:00:00.000Z`);
+
+        // Usamos el día siguiente como límite exclusivo.
+        // Así incluimos completamente la fecha final.
+        const finExclusivo = new Date(`${fechaHasta}T00:00:00.000Z`);
+        finExclusivo.setUTCDate(finExclusivo.getUTCDate() + 1);
+
+        if (
+          isNaN(inicio.getTime()) ||
+          isNaN(finExclusivo.getTime())
+        ) {
+          return res.status(400).json({
+            mensaje: 'Rango de fechas inválido',
+          });
+        }
+
+        if (inicio >= finExclusivo) {
+          return res.status(400).json({
+            mensaje: 'La fecha inicial no puede ser posterior a la fecha final',
+          });
+        }
+
+        where.fecha = {
+          gte: inicio,
+          lt: finExclusivo,
         };
       }
 
@@ -923,7 +1089,14 @@ if (anio && !mes) {
 }
 
 // FILTRO SEMANAL PARA UN AUXILIAR
-if (auxiliarId && !fecha && !mes && !anio) {
+if (
+  auxiliarId &&
+  !fecha &&
+  !mes &&
+  !anio &&
+  !fechaDesde &&
+  !fechaHasta
+) {
   const partesFecha = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/La_Paz',
     year: 'numeric',

@@ -309,8 +309,7 @@ export default function LoginScreen({ onLogin }: Props) {
         className="text-xs mt-6"
         style={{ color: '#8fa0b8' }}
       >
-        UMSS · Carrera de Informática y Sistemas · Laboratorios de
-        Cómputo
+        UMSS · Carrera de Informática y Sistemas · Laboratorios de Informática y Sistemas
       </p>
     </div>
   );

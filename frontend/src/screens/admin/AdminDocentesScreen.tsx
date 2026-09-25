@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import AdminSidebar from '../../components/AdminSidebar';
+import Footer from '../../components/Footer';
 import type { AdminScreen } from '../../types';
 import {
   obtenerAdminDocentes,
@@ -617,6 +618,7 @@ export default function AdminDocentesScreen({
             )}
           </div>
         </div>
+        <Footer />
       </main>
 
       {/* MODAL */}

@@ -132,7 +132,7 @@ function Icon({ name }: { name: string }) {
           <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
           <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
         </svg>
-      );
+      ); 
 
     case 'logout':
       return (
@@ -184,27 +184,22 @@ export default function AdminSidebar({
       >
         <div className="flex items-center gap-2.5">
           <div
-            className="rounded-lg flex items-center justify-center shrink-0"
+            className="rounded-lg flex items-center justify-center shrink-0 overflow-hidden"
             style={{
-              backgroundColor: 'rgba(255,255,255,0.14)',
-              width: 36,
-              height: 36,
+              backgroundColor: 'white',
+              width: 42,
+              height: 42,
             }}
           >
-            <svg
-              width="17"
-              height="17"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="white"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-              <line x1="8" y1="21" x2="16" y2="21" />
-              <line x1="12" y1="17" x2="12" y2="21" />
-            </svg>
+            <img
+              src="/logo-informes.jpeg"
+              alt="SILAB"
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+              }}
+            />
           </div>
 
           <div>
@@ -212,7 +207,7 @@ export default function AdminSidebar({
               className="text-white font-semibold text-sm leading-tight"
               style={{ fontFamily: 'DM Sans, sans-serif' }}
             >
-              Informes Diarios
+              SILAB - Sistema de Informes de Laboratorio
             </div>
 
             <div

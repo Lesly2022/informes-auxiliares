@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Screen } from '../types';
 import Sidebar from '../components/Sidebar';
+import Footer from '../components/Footer';
 import {
   obtenerInformePorId,
   type InformeDetalle,
@@ -805,7 +806,9 @@ export default function VisualizarInformeScreen({
               </div>
             </div>
           </div>
-        </div>
+                </div>
+
+        <Footer />
       </main>
     </div>
   );

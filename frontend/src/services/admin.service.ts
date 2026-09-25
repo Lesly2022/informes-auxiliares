@@ -40,15 +40,34 @@ export interface AdminDashboardResponse {
 // TIPOS - AUXILIARES
 // ==========================================
 
+export type DiaSemana =
+  | 'LUNES'
+  | 'MARTES'
+  | 'MIERCOLES'
+  | 'JUEVES'
+  | 'VIERNES'
+  | 'SABADO';
+
+export interface AdminTurnoAuxiliar {
+  id?: number;
+  dia: DiaSemana;
+  horarioInicio: string;
+  horarioFin: string;
+}
+
 export interface AdminAuxiliar {
   id: number;
   nombreCompleto: string;
   codigoSiss: string;
   carnet: string;
   cargo: string;
+
+  // Se mantienen temporalmente mientras terminamos la migración.
   horarioInicio: string;
   horarioFin: string;
+
   activo: boolean;
+  turnos: AdminTurnoAuxiliar[];
 }
 
 export interface AdminAuxiliarFormulario {
@@ -56,8 +75,7 @@ export interface AdminAuxiliarFormulario {
   codigoSiss: string;
   carnet: string;
   cargo: string;
-  horarioInicio: string;
-  horarioFin: string;
+  turnos: AdminTurnoAuxiliar[];
 }
 
 // ==========================================
@@ -146,6 +164,8 @@ export interface AdminFiltrosInformes {
   fecha?: string;
   mes?: number;
   anio?: number;
+  fechaDesde?: string;
+  fechaHasta?: string;
 }
 
 // ==========================================
@@ -713,6 +733,14 @@ export async function obtenerAdminInformes(
 
   if (filtros.anio !== undefined) {
     params.set('anio', String(filtros.anio));
+  }
+
+  if (filtros.fechaDesde) {
+    params.set('fechaDesde', filtros.fechaDesde);
+  }
+
+  if (filtros.fechaHasta) {
+    params.set('fechaHasta', filtros.fechaHasta);
   }
 
   const query = params.toString();
