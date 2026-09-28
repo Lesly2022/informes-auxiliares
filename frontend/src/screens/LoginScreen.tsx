@@ -91,34 +91,23 @@ export default function LoginScreen({ onLogin }: Props) {
           }}
         >
           <div
-            className="rounded-xl flex items-center justify-center mb-4"
+            className="rounded-xl overflow-hidden mb-4"
             style={{
-              backgroundColor: 'rgba(255,255,255,0.15)',
-              width: 54,
-              height: 54,
+              width: 72,
+              height: 72,
+              backgroundColor: 'white',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.12)',
             }}
           >
-            <svg
-              width="26"
-              height="26"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="white"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <rect
-                x="2"
-                y="3"
-                width="20"
-                height="14"
-                rx="2"
-                ry="2"
-              />
-              <line x1="8" y1="21" x2="16" y2="21" />
-              <line x1="12" y1="17" x2="12" y2="21" />
-            </svg>
+            <img
+              src="/logo-informes.jpeg"
+              alt="Logo SILAB"
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+              }}
+            />
           </div>
 
           <h1
@@ -127,7 +116,7 @@ export default function LoginScreen({ onLogin }: Props) {
               fontFamily: 'DM Sans, sans-serif',
             }}
           >
-            Sistema de Informes Diarios
+            SILAB - Sistema de Informes de Laboratorio
           </h1>
 
           <p

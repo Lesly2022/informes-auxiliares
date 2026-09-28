@@ -140,25 +140,6 @@ export default function DashboardScreen({ onNavigate, onLogout }: Props) {
           style={{ backgroundColor: 'white', borderColor: '#e2e8f0' }}
         >
           <div className="flex items-center gap-3">
-          <div
-            className="rounded-lg overflow-hidden shrink-0"
-            style={{
-              width: 42,
-              height: 42,
-              backgroundColor: 'white',
-            }}
-          >
-            <img
-              src="/logo-informes.jpeg"
-              alt="SILAB"
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-              }}
-            />
-          </div>
-
           <div>
             <h1
               className="font-semibold text-base"

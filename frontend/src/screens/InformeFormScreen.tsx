@@ -227,6 +227,15 @@ const [fecha, setFecha] = useState(obtenerFechaBolivia);
   const horarioEfectivo =
     horarioCambiado ? horarioOtro : horarioTurno;
 
+  const cargosConActividadesAcademicas = [
+    'Administrador de Lab. de Cómputo',
+    'Auxiliar de Terminal de Cómputo',
+  ];
+
+  const mostrarActividadesAcademicas =
+    perfil !== null &&
+    cargosConActividadesAcademicas.includes(perfil.cargo);
+
   useEffect(() => {
     const cargarPerfil = async () => {
       try {
@@ -453,7 +462,8 @@ useEffect(() => {
         horarioFin,
         fecha,
         horarioModificado: horarioCambiado,
-        actividadesAcademicas: actividadesAcademicas.map(act => ({
+        actividadesAcademicas: mostrarActividadesAcademicas
+          ? actividadesAcademicas.map(act => ({
           sala: act.sala,
           docenteId:
             act.docente && act.docente !== 'Otro'
@@ -478,7 +488,8 @@ useEffect(() => {
           horarioInicio: act.horario.split('-')[0]?.trim() || '',
           horarioFin: act.horario.split('-')[1]?.trim() || '',
           observaciones: act.observaciones.trim() || null,
-        })),
+        }))
+  : [],
         actividadesLaboratorio: actividadesLab.map(a => a.trim()).filter(Boolean),
         incidencias: incidencias
           .filter(i => i.equipo.trim() || i.descripcion.trim() || i.accion.trim())
@@ -780,6 +791,7 @@ useEffect(() => {
           </div>
 
           {/* ── SECCIÓN 2: ACTIVIDADES ACADÉMICAS ── */}
+          {mostrarActividadesAcademicas && (
           <div style={cardStyle}>
             <SectionHeader num="2" title="Actividades Académicas Realizadas" badge="Opcional" />
             <p className="text-sm mb-5" style={{ color: '#5a6a82' }}>
@@ -888,10 +900,15 @@ useEffect(() => {
               </div>
             )}
           </div>
-
+          )}
           {/* ── SECCIÓN 3: ACTIVIDADES LABORATORIO ── */}
           <div style={{ ...cardStyle, borderColor: errors.actividadesLab ? '#f5c6bc' : '#e2e8f0' }}>
-            <SectionHeader num="3" title="Actividades Realizadas en el Laboratorio" badge="Obligatorio" badgeType="required" />
+            <SectionHeader
+              num={mostrarActividadesAcademicas ? '3' : '2'}
+              title="Actividades Realizadas en el Laboratorio"
+              badge="Obligatorio"
+              badgeType="required"
+            />
             <p className="text-sm mb-4" style={{ color: '#5a6a82' }}>
               Detalla las tareas de administración, soporte y funcionamiento realizadas durante el turno.
             </p>
@@ -933,7 +950,11 @@ useEffect(() => {
 
           {/* ── SECCIÓN 4: INCIDENCIAS ── */}
           <div style={cardStyle}>
-            <SectionHeader num="4" title="Incidencias y Observaciones" badge="Opcional" />
+            <SectionHeader
+              num={mostrarActividadesAcademicas ? '4' : '3'}
+              title="Incidencias y Observaciones"
+              badge="Opcional"
+            />
             <p className="text-sm mb-4" style={{ color: '#5a6a82' }}>
               Registra problemas, fallas, novedades o situaciones relevantes presentadas durante el turno.
             </p>
@@ -978,7 +999,11 @@ useEffect(() => {
 
           {/* ── SECCIÓN 5: PENDIENTES ── */}
           <div style={cardStyle}>
-            <SectionHeader num="5" title="Pendientes" badge="Opcional" />
+            <SectionHeader
+              num={mostrarActividadesAcademicas ? '5' : '4'}
+              title="Pendientes"
+              badge="Opcional"
+            />
             <p className="text-sm mb-4" style={{ color: '#5a6a82' }}>
               Registra actividades o requerimientos que no pudieron concluirse y deberán atenderse posteriormente.
             </p>

@@ -373,31 +373,77 @@ export default function AdminInformesScreen({
                 </select>
               </div>
 
-              {/* AUXILIAR */}
+              {/* AUXILIARES ACTIVOS */}
               <div className="flex flex-col gap-1 flex-1 min-w-56">
                 <label
                   className="text-xs font-medium"
                   style={{ color: '#5a6a82' }}
                 >
-                  Auxiliar
+                  Auxiliar activo
                 </label>
 
                 <select
-                  value={auxiliarId}
+                  value={
+                    auxiliares.some(
+                      (auxiliar) =>
+                        auxiliar.activo &&
+                        String(auxiliar.id) === auxiliarId
+                    )
+                      ? auxiliarId
+                      : ''
+                  }
                   onChange={(e) => setAuxiliarId(e.target.value)}
                   style={{
                     ...inputBase,
                     width: '100%',
                   }}
                 >
-                  <option value="">Todos los auxiliares</option>
+                  <option value="">Seleccionar auxiliar activo</option>
 
-                  {auxiliares.map((auxiliar) => (
-                    <option key={auxiliar.id} value={auxiliar.id}>
-                      {auxiliar.nombreCompleto}
-                      {!auxiliar.activo ? ' (Inactivo)' : ''}
-                    </option>
-                  ))}
+                  {auxiliares
+                    .filter((auxiliar) => auxiliar.activo)
+                    .map((auxiliar) => (
+                      <option key={auxiliar.id} value={auxiliar.id}>
+                        {auxiliar.nombreCompleto}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              {/* AUXILIARES INACTIVOS */}
+              <div className="flex flex-col gap-1 flex-1 min-w-56">
+                <label
+                  className="text-xs font-medium"
+                  style={{ color: '#5a6a82' }}
+                >
+                  Auxiliar inactivo
+                </label>
+
+                <select
+                  value={
+                    auxiliares.some(
+                      (auxiliar) =>
+                        !auxiliar.activo &&
+                        String(auxiliar.id) === auxiliarId
+                    )
+                      ? auxiliarId
+                      : ''
+                  }
+                  onChange={(e) => setAuxiliarId(e.target.value)}
+                  style={{
+                    ...inputBase,
+                    width: '100%',
+                  }}
+                >
+                  <option value="">Seleccionar auxiliar inactivo</option>
+
+                  {auxiliares
+                    .filter((auxiliar) => !auxiliar.activo)
+                    .map((auxiliar) => (
+                      <option key={auxiliar.id} value={auxiliar.id}>
+                        {auxiliar.nombreCompleto}
+                      </option>
+                    ))}
                 </select>
               </div>
 

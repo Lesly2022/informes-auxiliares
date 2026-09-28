@@ -69,12 +69,22 @@ export default function Sidebar({ active, onNavigate, onLogout }: SidebarProps) 
       <div className="px-5 py-6 border-b" style={{ borderColor: 'rgba(255,255,255,0.10)' }}>
         <div className="flex items-center gap-2.5">
           <div
-            className="rounded-lg flex items-center justify-center shrink-0"
-            style={{ backgroundColor: 'rgba(255,255,255,0.14)', width: 36, height: 36 }}
+            className="rounded-lg overflow-hidden shrink-0"
+            style={{
+              width: 42,
+              height: 42,
+              backgroundColor: 'white',
+            }}
           >
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
-            </svg>
+            <img
+              src="/logo-informes.jpeg"
+              alt="SILAB"
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+              }}
+            />
           </div>
           <div>
             <div className="text-white font-semibold text-sm leading-tight" style={{ fontFamily: 'DM Sans, sans-serif' }}>
