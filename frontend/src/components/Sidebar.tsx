@@ -10,7 +10,6 @@ const navItems: { label: string; screen: Screen; icon: string }[] = [
   { label: 'Inicio', screen: 'dashboard', icon: 'home' },
   { label: 'Elaborar informe', screen: 'elaborar', icon: 'edit' },
   { label: 'Informes pasados', screen: 'informes', icon: 'list' },
-  { label: 'Mi perfil', screen: 'dashboard', icon: 'user' },
 ];
 
 function Icon({ name }: { name: string }) {
@@ -31,12 +30,6 @@ function Icon({ name }: { name: string }) {
       return (
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
-        </svg>
-      );
-    case 'user':
-      return (
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
         </svg>
       );
     case 'logout':
