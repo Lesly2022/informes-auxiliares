@@ -202,6 +202,14 @@ export default function AdminVisualizarInformeScreen({
   // INFORME
   // ==========================================
 
+  const cargosConActividadesAcademicas = [
+    'Administrador de Lab. de Cómputo',
+    'Auxiliar de Terminal de Cómputo',
+  ];
+
+  const mostrarActividadesAcademicas =
+    cargosConActividadesAcademicas.includes(informe.usuario.cargo);
+
   return (
     <div
       className="flex min-h-screen"
@@ -398,7 +406,8 @@ export default function AdminVisualizarInformeScreen({
 
           <div className="flex flex-col gap-5">
             {/* ACTIVIDADES ACADÉMICAS */}
-            <Seccion titulo="Actividades académicas">
+            {mostrarActividadesAcademicas && (
+              <Seccion titulo="Actividades académicas">
               {informe.actividadesAcademicas.length === 0 ? (
                 <p
                   className="text-sm"
@@ -521,6 +530,7 @@ export default function AdminVisualizarInformeScreen({
                 </div>
               )}
             </Seccion>
+            )}
 
             {/* ACTIVIDADES DE LABORATORIO */}
             <Seccion titulo="Actividades de laboratorio">

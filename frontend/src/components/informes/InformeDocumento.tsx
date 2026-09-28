@@ -40,6 +40,13 @@ function TituloSeccion({ children }: { children: React.ReactNode }) {
 export default function InformeDocumento({ informe }: Props) {
   const horarioTurno =
     `${informe.horarioInicio} - ${informe.horarioFin}`;
+        const cargosConActividadesAcademicas = [
+      'Administrador de Lab. de Cómputo',
+      'Auxiliar de Terminal de Cómputo',
+    ];
+
+    const mostrarActividadesAcademicas =
+      cargosConActividadesAcademicas.includes(informe.usuario.cargo);
 
   return (
     <article
@@ -165,8 +172,9 @@ export default function InformeDocumento({ informe }: Props) {
         </div>
 
         <div className="flex flex-col gap-7">
-          {/* 1. ACTIVIDADES ACADÉMICAS */}
-          <section>
+          {/* ACTIVIDADES ACADÉMICAS */}
+            {mostrarActividadesAcademicas && (
+              <section>
             <TituloSeccion>1. Actividades académicas</TituloSeccion>
 
             {informe.actividadesAcademicas.length === 0 ? (
@@ -254,11 +262,14 @@ export default function InformeDocumento({ informe }: Props) {
                 })}
               </div>
             )}
-          </section>
+                    </section>
+          )}
 
-          {/* 2. ACTIVIDADES DE LABORATORIO */}
+          {/* ACTIVIDADES DE LABORATORIO */}
           <section>
-            <TituloSeccion>2. Actividades de laboratorio</TituloSeccion>
+            <TituloSeccion>
+              {mostrarActividadesAcademicas ? '2' : '1'}. Actividades de laboratorio
+            </TituloSeccion>
 
             {informe.actividadesLaboratorio.length === 0 ? (
               <p className="text-sm italic" style={{ color: '#8fa0b8' }}>
@@ -294,7 +305,9 @@ export default function InformeDocumento({ informe }: Props) {
 
           {/* 3. INCIDENCIAS */}
           <section>
-            <TituloSeccion>3. Incidencias</TituloSeccion>
+            <TituloSeccion>
+              {mostrarActividadesAcademicas ? '3' : '2'}. Incidencias
+            </TituloSeccion>
 
             {informe.incidencias.length === 0 ? (
               <p className="text-sm italic" style={{ color: '#8fa0b8' }}>
@@ -354,7 +367,9 @@ export default function InformeDocumento({ informe }: Props) {
 
           {/* 4. PENDIENTES */}
           <section>
-            <TituloSeccion>4. Pendientes</TituloSeccion>
+            <TituloSeccion>
+              {mostrarActividadesAcademicas ? '4' : '3'}. Pendientes
+            </TituloSeccion>
 
             {informe.pendientes.length === 0 ? (
               <p className="text-sm italic" style={{ color: '#8fa0b8' }}>
@@ -390,7 +405,9 @@ export default function InformeDocumento({ informe }: Props) {
 
           {/* 5. ESTADO Y RECOMENDACIONES */}
           <section>
-            <TituloSeccion>5. Estado y recomendaciones</TituloSeccion>
+            <TituloSeccion>
+              {mostrarActividadesAcademicas ? '5' : '4'}. Estado y recomendaciones
+            </TituloSeccion>
 
             <div
               className="rounded-xl p-4"

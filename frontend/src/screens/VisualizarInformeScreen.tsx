@@ -177,6 +177,14 @@ export default function VisualizarInformeScreen({
   const horarioTurno =
     `${informe.horarioInicio} - ${informe.horarioFin}`;
 
+  const cargosConActividadesAcademicas = [
+    'Administrador de Lab. de Cómputo',
+    'Auxiliar de Terminal de Cómputo',
+  ];
+
+  const mostrarActividadesAcademicas =
+    cargosConActividadesAcademicas.includes(informe.usuario.cargo);
+
   return (
     <div className="flex" style={{ minHeight: '100vh' }}>
       <div className="no-print">
@@ -438,8 +446,9 @@ export default function VisualizarInformeScreen({
                   ))}
                 </div>
               </section>
-
-              <section>
+            
+            {mostrarActividadesAcademicas && (
+            <section>
                 {sectionHeading(
                   '2. Actividades Académicas Realizadas'
                 )}
@@ -550,10 +559,11 @@ export default function VisualizarInformeScreen({
                   </div>
                 )}
               </section>
+              )}
 
               <section>
                 {sectionHeading(
-                  '3. Actividades Realizadas en el Laboratorio'
+                  `${mostrarActividadesAcademicas ? '3' : '2'}. Actividades Realizadas en el Laboratorio`
                 )}
 
                 {informe.actividadesLaboratorio.length === 0 ? (
@@ -602,7 +612,7 @@ export default function VisualizarInformeScreen({
 
               <section>
                 {sectionHeading(
-                  '4. Incidencias y Observaciones'
+                  `${mostrarActividadesAcademicas ? '4' : '3'}. Incidencias y Observaciones`
                 )}
 
                 {informe.incidencias.length === 0 ? (
@@ -677,7 +687,9 @@ export default function VisualizarInformeScreen({
               </section>
 
               <section>
-                {sectionHeading('5. Pendientes')}
+                {sectionHeading(
+                  `${mostrarActividadesAcademicas ? '5' : '4'}. Pendientes`
+                )}
 
                 {informe.pendientes.length === 0 &&
                 !informe.estadoRecomendacion ? (
