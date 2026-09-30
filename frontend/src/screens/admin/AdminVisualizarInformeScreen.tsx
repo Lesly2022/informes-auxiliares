@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import AdminSidebar from '../../components/AdminSidebar';
 import Footer from '../../components/Footer';
+import InformeDocumento from '../../components/informes/InformeDocumento';
 import type { AdminScreen } from '../../types';
 import {
   obtenerAdminInformePorId,
@@ -91,11 +92,11 @@ export default function AdminVisualizarInformeScreen({
   // ==========================================
 
   if (cargando) {
-    return (
-      <div
-        className="flex min-h-screen"
-        style={{ backgroundColor: '#f6f8fc' }}
-      >
+  return (
+    <div
+      className="flex min-h-screen"
+      style={{ backgroundColor: '#f6f8fc' }}
+    >
         <AdminSidebar
           active="admin-informes"
           onNavigate={onNavigate}
@@ -211,10 +212,12 @@ export default function AdminVisualizarInformeScreen({
     cargosConActividadesAcademicas.includes(informe.usuario.cargo);
 
   return (
-    <div
-      className="flex min-h-screen"
-      style={{ backgroundColor: '#f6f8fc' }}
-    >
+    <>
+      {/* VISTA NORMAL */}
+      <div
+        className="admin-vista-normal flex min-h-screen"
+        style={{ backgroundColor: '#f6f8fc' }}
+      >
       <AdminSidebar
         active="admin-informes"
         onNavigate={onNavigate}
@@ -266,11 +269,12 @@ export default function AdminVisualizarInformeScreen({
         </header>
 
         <div className="p-8">
-          {/* VOLVER */}
+        {/* ACCIONES */}
+        <div className="flex items-center justify-between gap-4 mb-5">
           <button
             type="button"
             onClick={() => onNavigate('admin-informes')}
-            className="flex items-center gap-2 text-sm font-semibold mb-5"
+            className="flex items-center gap-2 text-sm font-semibold"
             style={{ color: B_MID }}
           >
             <svg
@@ -289,6 +293,33 @@ export default function AdminVisualizarInformeScreen({
 
             Volver a informes
           </button>
+
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white"
+            style={{
+              background: `linear-gradient(135deg, ${B_DARK} 0%, ${B_MID} 100%)`,
+            }}
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="6 9 6 2 18 2 18 9" />
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+              <rect x="6" y="14" width="12" height="8" />
+            </svg>
+
+            Imprimir informe
+          </button>
+        </div>
 
           {/* INFORMACIÓN GENERAL */}
           <section
@@ -706,8 +737,39 @@ export default function AdminVisualizarInformeScreen({
           </div>
                 </div>
 
-        <Footer />
+                <Footer />
       </main>
     </div>
+
+    {/* VISTA EXCLUSIVA PARA IMPRESIÓN */}
+    <div className="admin-vista-impresion">
+      <InformeDocumento informe={informe} />
+    </div>
+
+    <style>{`
+      .admin-vista-impresion {
+        display: none;
+      }
+
+      @media print {
+        .admin-vista-normal {
+          display: none !important;
+        }
+
+        .admin-vista-impresion {
+          display: block !important;
+        }
+
+        @page {
+          size: A4;
+          margin: 12mm;
+        }
+
+        body {
+          background: white !important;
+        }
+      }
+    `}</style>
+  </>
   );
 }
