@@ -28,7 +28,7 @@ export interface Perfil {
   turnos: TurnoAuxiliar[];
 }
 
-const API_URL = 'http://localhost:3000/api';
+const API_URL = '/api';
 
 export async function obtenerPerfil(): Promise<Perfil> {
   const token = localStorage.getItem('token');
