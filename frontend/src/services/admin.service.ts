@@ -1,3 +1,4 @@
+import { verificarSesion } from './session.service';
 const API_URL = '/api';
 
 // ==========================================
@@ -173,7 +174,7 @@ export interface AdminFiltrosInformes {
 // ==========================================
 
 function obtenerToken(): string {
-  const token = localStorage.getItem('token');
+  const token = sessionStorage.getItem('token');
 
   if (!token) {
     throw new Error('No existe una sesión activa');
@@ -195,6 +196,8 @@ export async function obtenerAdminDashboard(): Promise<AdminDashboardResponse> {
       Authorization: `Bearer ${token}`,
     },
   });
+
+  verificarSesion(response);
 
   const data = await response.json();
 
@@ -220,6 +223,8 @@ export async function obtenerAdminAuxiliares(): Promise<AdminAuxiliar[]> {
       Authorization: `Bearer ${token}`,
     },
   });
+
+  verificarSesion(response);
 
   const data = await response.json();
 
@@ -250,6 +255,8 @@ export async function crearAdminAuxiliar(
     body: JSON.stringify(auxiliar),
   });
 
+  verificarSesion(response);
+
   const data = await response.json();
 
   if (!response.ok) {
@@ -279,6 +286,8 @@ export async function actualizarAdminAuxiliar(
     },
     body: JSON.stringify(auxiliar),
   });
+
+  verificarSesion(response);
 
   const data = await response.json();
 
@@ -312,6 +321,8 @@ export async function cambiarEstadoAdminAuxiliar(
       body: JSON.stringify({ activo }),
     }
   );
+
+  verificarSesion(response);
 
   const data = await response.json();
 
@@ -348,6 +359,8 @@ export async function obtenerAdminDocentes(): Promise<AdminDocente[]> {
     },
   });
 
+  verificarSesion(response);
+
   const data = await response.json();
 
   if (!response.ok) {
@@ -376,6 +389,8 @@ export async function crearAdminDocente(
     },
     body: JSON.stringify({ nombreCompleto }),
   });
+
+  verificarSesion(response);
 
   const data = await response.json();
 
@@ -406,6 +421,8 @@ export async function actualizarAdminDocente(
     },
     body: JSON.stringify({ nombreCompleto }),
   });
+
+  verificarSesion(response);
 
   const data = await response.json();
 
@@ -439,6 +456,8 @@ export async function cambiarEstadoAdminDocente(
       body: JSON.stringify({ activo }),
     }
   );
+
+  verificarSesion(response);
 
   const data = await response.json();
 
@@ -475,6 +494,8 @@ export async function obtenerAdminSalas(): Promise<AdminSala[]> {
     },
   });
 
+  verificarSesion(response);
+
   const data = await response.json();
 
   if (!response.ok) {
@@ -503,6 +524,8 @@ export async function crearAdminSala(
     },
     body: JSON.stringify({ nombre }),
   });
+
+  verificarSesion(response);
 
   const data = await response.json();
 
@@ -533,6 +556,8 @@ export async function actualizarAdminSala(
     },
     body: JSON.stringify({ nombre }),
   });
+
+  verificarSesion(response);
 
   const data = await response.json();
 
@@ -566,6 +591,8 @@ export async function cambiarEstadoAdminSala(
       body: JSON.stringify({ activo }),
     }
   );
+
+  verificarSesion(response);
 
   const data = await response.json();
 
@@ -603,6 +630,8 @@ export async function obtenerAdminMaterias(): Promise<AdminMateria[]> {
     },
   });
 
+  verificarSesion(response);
+
   const data = await response.json();
 
   if (!response.ok) {
@@ -632,6 +661,8 @@ export async function crearAdminMateria(
     },
     body: JSON.stringify({ codigo, nombre }),
   });
+
+  verificarSesion(response);
 
   const data = await response.json();
 
@@ -663,6 +694,8 @@ export async function actualizarAdminMateria(
     },
     body: JSON.stringify({ codigo, nombre }),
   });
+
+  verificarSesion(response);
 
   const data = await response.json();
 
@@ -696,6 +729,8 @@ export async function cambiarEstadoAdminMateria(
       body: JSON.stringify({ activo }),
     }
   );
+
+  verificarSesion(response);
 
   const data = await response.json();
 
@@ -756,6 +791,8 @@ export async function obtenerAdminInformes(
     },
   });
 
+  verificarSesion(response);
+
   const data = await response.json();
 
   if (!response.ok) {
@@ -782,6 +819,8 @@ export async function obtenerAdminInformePorId(
       Authorization: `Bearer ${token}`,
     },
   });
+
+  verificarSesion(response);
 
   const data = await response.json();
 

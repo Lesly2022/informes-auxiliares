@@ -193,7 +193,7 @@ export default function AdminSidebar({
           >
             <img
               src="/logo-informes.jpeg"
-              alt="SILAB"
+              alt="SILABIS"
               style={{
                 width: '100%',
                 height: '100%',
@@ -207,7 +207,7 @@ export default function AdminSidebar({
               className="text-white font-semibold text-sm leading-tight"
               style={{ fontFamily: 'DM Sans, sans-serif' }}
             >
-              SILAB - Sistema de Informes de Laboratorio
+              SILABIS
             </div>
 
             <div

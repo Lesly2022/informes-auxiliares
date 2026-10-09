@@ -100,7 +100,7 @@ export default function InformeDocumento({ informe }: Props) {
           className="text-sm mt-1"
           style={{ color: 'rgba(255,255,255,0.80)' }}
         >
-          Laboratorios de Informática y Sistemas · UMSS
+          Laboratorio de Informática y Sistemas · UMSS
         </p>
       </div>
 

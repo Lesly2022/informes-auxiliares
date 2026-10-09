@@ -148,7 +148,7 @@ export default function DashboardScreen({ onNavigate, onLogout }: Props) {
                 color: '#111827',
               }}
             >
-              SILAB - Sistema de Informes de Laboratorio
+              SILABIS – Sistema de Informes de Laboratorio Informática y Sistemas
             </h1>
 
             <p

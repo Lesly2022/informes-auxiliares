@@ -286,6 +286,17 @@ useEffect(() => {
       const informe = await obtenerInformePorId(editReportId);
 
       if (!activo) return;
+      const usuarioActual = JSON.parse(
+        sessionStorage.getItem('usuario') || '{}'
+      );
+
+      if (Number(usuarioActual.id) !== informe.usuario.id) {
+        setErrorGuardado(
+          'No tienes permiso para editar este informe. Solo puedes visualizar los informes de tus compañeros.'
+        );
+        setCargandoEdicion(false);
+        return;
+      }
 
       // Datos generales
       setNombreUsuario(informe.usuario.nombreCompleto);

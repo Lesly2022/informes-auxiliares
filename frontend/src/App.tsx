@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { AdminScreen, Screen } from './types';
 
 import LoginScreen from './screens/LoginScreen';
@@ -18,9 +18,40 @@ import AdminImprimirInformesScreen from './screens/admin/AdminImprimirInformesSc
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>(() => {
-      const token = localStorage.getItem('token');
-      const usuarioGuardado = localStorage.getItem('usuario');
-      const pantallaGuardada = localStorage.getItem('screen') as Screen | null;
+      const token = sessionStorage.getItem('token');
+      const usuarioGuardado = sessionStorage.getItem('usuario');
+      const pantallaGuardada = sessionStorage.getItem('screen') as Screen | null;
+
+      if (token) {
+        try {
+          const partes = token.split('.');
+
+          if (partes.length !== 3) {
+            throw new Error('Token inválido');
+          }
+
+          const payload = JSON.parse(
+            atob(
+              partes[1]
+                .replace(/-/g, '+')
+                .replace(/_/g, '/')
+            )
+          );
+
+          if (
+            typeof payload.exp !== 'number' ||
+            payload.exp * 1000 <= Date.now()
+          ) {
+            throw new Error('Token expirado');
+          }
+        } catch {
+          sessionStorage.removeItem('token');
+          sessionStorage.removeItem('usuario');
+          sessionStorage.removeItem('screen');
+          return 'login';
+        }
+      }
+
 
       if (!token || !usuarioGuardado) {
         return 'login';
@@ -55,17 +86,40 @@ export default function App() {
 
         return 'login';
       } catch {
-        localStorage.removeItem('token');
-        localStorage.removeItem('usuario');
-        localStorage.removeItem('screen');
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('usuario');
+        sessionStorage.removeItem('screen');
         return 'login';
       }
     });
   const [selectedId, setSelectedId] = useState<string | null>(null);
+useEffect(() => {
+  const manejarSesionExpirada = () => {
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('usuario');
+    sessionStorage.removeItem('screen');
+
+    setSelectedId(null);
+    setScreen('login');
+  };
+
+  window.addEventListener(
+    'sesion-expirada',
+    manejarSesionExpirada
+  );
+
+  return () => {
+    window.removeEventListener(
+      'sesion-expirada',
+      manejarSesionExpirada
+    );
+  };
+}, []);
+
 
   const navigate = (s: Screen, id?: string) => {
       setScreen(s);
-      localStorage.setItem('screen', s);
+      sessionStorage.setItem('screen', s);
 
       if (id !== undefined) {
         setSelectedId(id);
@@ -79,9 +133,9 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('usuario');
-    localStorage.removeItem('screen');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('usuario');
+    sessionStorage.removeItem('screen');
 
     setScreen('login');
     setSelectedId(null);

@@ -1,5 +1,13 @@
+import { verificarSesion } from './session.service';
+
 export interface ResumenInforme {
   id: number;
+  usuarioId: number;
+  usuario: {
+    id: number;
+    nombreCompleto: string;
+    cargo: string;
+  };
   fecha: string;
   horarioInicio: string;
   horarioFin: string;
@@ -142,7 +150,7 @@ interface RespuestaGuardarInforme {
 const API_URL = '/api';
 
 function obtenerToken(): string {
-  const token = localStorage.getItem('token');
+  const token = sessionStorage.getItem('token');
 
   if (!token) {
     throw new Error('No existe una sesión activa');
@@ -162,6 +170,7 @@ export async function obtenerInformes(): Promise<ResumenInforme[]> {
     },
   });
 
+  verificarSesion(response);
   const data = await response.json();
 
   if (!response.ok) {
@@ -186,6 +195,7 @@ export async function obtenerInformePorId(
     },
   });
 
+  verificarSesion(response);
   const data = await response.json();
 
   if (!response.ok) {
@@ -213,6 +223,7 @@ export async function crearInforme(
     body: JSON.stringify(informe),
   });
 
+  verificarSesion(response);
   const data = await response.json();
 
   if (!response.ok) {
@@ -241,6 +252,7 @@ export async function actualizarInforme(
     body: JSON.stringify(informe),
   });
 
+  verificarSesion(response);
   const data = await response.json();
 
   if (!response.ok) {

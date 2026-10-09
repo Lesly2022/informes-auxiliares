@@ -1,3 +1,4 @@
+import { verificarSesion } from './session.service';
 export type DiaSemana =
   | 'LUNES'
   | 'MARTES'
@@ -31,7 +32,7 @@ export interface Perfil {
 const API_URL = '/api';
 
 export async function obtenerPerfil(): Promise<Perfil> {
-  const token = localStorage.getItem('token');
+  const token = sessionStorage.getItem('token');
 
   if (!token) {
     throw new Error('No existe una sesión activa');
@@ -43,6 +44,8 @@ export async function obtenerPerfil(): Promise<Perfil> {
       Authorization: `Bearer ${token}`,
     },
   });
+
+  verificarSesion(response);
 
   const data = await response.json();
 

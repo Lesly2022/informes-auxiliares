@@ -23,6 +23,11 @@ export default function InformesPasadosScreen({
   onNavigate,
   onLogout,
 }: Props) {
+    const usuarioActual = JSON.parse(
+    sessionStorage.getItem('usuario') || '{}'
+  );
+
+  const usuarioIdActual = Number(usuarioActual.id);
   const [reports, setReports] = useState<ResumenInforme[]>([]);
   const [search, setSearch] = useState('');
   const [desde, setDesde] = useState('');
@@ -418,6 +423,7 @@ export default function InformesPasadosScreen({
                   >
                     {[
                       'Fecha',
+                      'Auxiliar responsable',
                       'Horario del turno',
                       'Actividades',
                       'Estado',
@@ -507,6 +513,34 @@ export default function InformesPasadosScreen({
                             >
                               {formatFecha(r.fecha)}
                             </span>
+                          </div>
+                        </td>
+
+                        {/* AUXILIAR RESPONSABLE */}
+                        <td className="px-5 py-4">
+                          <div className="flex flex-col gap-1">
+                            <span
+                              className="text-sm font-medium"
+                              style={{ color: '#111827' }}
+                            >
+                              {r.usuario.nombreCompleto}
+                            </span>
+
+                            {r.usuarioId === usuarioIdActual ? (
+                              <span
+                                className="text-xs font-medium"
+                                style={{ color: '#15803d' }}
+                              >
+                                Mi informe
+                              </span>
+                            ) : (
+                              <span
+                                className="text-xs font-medium"
+                                style={{ color: '#2554a8' }}
+                              >
+                                Compartido · Solo lectura
+                              </span>
+                            )}
                           </div>
                         </td>
 
@@ -620,7 +654,7 @@ export default function InformesPasadosScreen({
 
                               Visualizar
                             </button>
-
+                            {r.usuarioId === usuarioIdActual && (
                             <button
                               onClick={() =>
                                 onNavigate(
@@ -659,6 +693,7 @@ export default function InformesPasadosScreen({
 
                               Editar
                             </button>
+                            )}
                           </div>
                         </td>
                       </tr>

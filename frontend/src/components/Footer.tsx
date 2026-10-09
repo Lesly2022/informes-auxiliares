@@ -11,7 +11,7 @@ export default function Footer() {
         className="text-xs"
         style={{ color: '#5a6a82' }}
       >
-        © 2026 SILAB – Sistema de Informes de Laboratorio
+        © 2026 SILABIS – Sistema de Informes de Laboratorio Informática y Sistemas
       </p>
 
       <p

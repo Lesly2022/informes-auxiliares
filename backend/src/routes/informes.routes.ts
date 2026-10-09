@@ -22,15 +22,34 @@ router.get('/', verificarToken, async (req: AuthRequest, res) => {
         mensaje: 'Usuario no identificado',
       });
     }
+    const usuarioActual = await prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: { cargo: true },
+    });
 
+    if (!usuarioActual) {
+      return res.status(404).json({
+        mensaje: 'Usuario no encontrado',
+      });
+    }
     const informes = await prisma.informe.findMany({
       where: {
-        usuarioId,
+        usuario: {
+          cargo: usuarioActual.cargo,
+        },
       },
       orderBy: {
         fecha: 'desc',
       },
       select: {
+        usuarioId: true,
+        usuario: {
+          select: {
+            id: true,
+            nombreCompleto: true,
+            cargo: true,
+          },
+        },
         id: true,
         fecha: true,
         horarioInicio: true,
@@ -83,10 +102,23 @@ router.get('/:id', verificarToken, async (req: AuthRequest, res) => {
       });
     }
 
+    const usuarioActual = await prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: { cargo: true },
+    });
+
+    if (!usuarioActual) {
+      return res.status(404).json({
+        mensaje: 'Usuario no encontrado',
+      });
+    }
+
     const informe = await prisma.informe.findFirst({
       where: {
         id,
-        usuarioId,
+        usuario: {
+          cargo: usuarioActual.cargo,
+        },
       },
       include: {
         usuario: {

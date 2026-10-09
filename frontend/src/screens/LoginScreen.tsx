@@ -35,8 +35,8 @@ export default function LoginScreen({ onLogin }: Props) {
           passwordLimpio,
         );
 
-        localStorage.setItem('token', data.token);
-        localStorage.setItem(
+        sessionStorage.setItem('token', data.token);
+        sessionStorage.setItem(
           'usuario',
           JSON.stringify(data.usuario),
         );
@@ -51,8 +51,8 @@ export default function LoginScreen({ onLogin }: Props) {
           return;
         }
 
-        localStorage.removeItem('token');
-        localStorage.removeItem('usuario');
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('usuario');
 
         setError(
           'El usuario no tiene un rol válido para acceder al sistema.',
@@ -101,7 +101,7 @@ export default function LoginScreen({ onLogin }: Props) {
           >
             <img
               src="/logo-informes.jpeg"
-              alt="Logo SILAB"
+              alt="Logo SILABIS"
               style={{
                 width: '100%',
                 height: '100%',
@@ -116,7 +116,7 @@ export default function LoginScreen({ onLogin }: Props) {
               fontFamily: 'DM Sans, sans-serif',
             }}
           >
-            SILAB - Sistema de Informes de Laboratorio
+            SILABIS – Sistema de Informes de Laboratorio Informática y Sistemas
           </h1>
 
           <p
@@ -125,7 +125,7 @@ export default function LoginScreen({ onLogin }: Props) {
               color: 'rgba(255,255,255,0.75)',
             }}
           >
-            Laboratorios de Cómputo – Informática y Sistemas
+            Laboratorios de Informática y Sistemas
           </p>
 
           <p

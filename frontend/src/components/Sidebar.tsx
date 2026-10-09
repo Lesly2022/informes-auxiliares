@@ -71,7 +71,7 @@ export default function Sidebar({ active, onNavigate, onLogout }: SidebarProps) 
           >
             <img
               src="/logo-informes.jpeg"
-              alt="SILAB"
+              alt="SILABIS"
               style={{
                 width: '100%',
                 height: '100%',
@@ -81,7 +81,7 @@ export default function Sidebar({ active, onNavigate, onLogout }: SidebarProps) 
           </div>
           <div>
             <div className="text-white font-semibold text-sm leading-tight" style={{ fontFamily: 'DM Sans, sans-serif' }}>
-              SILAB - Sistema de Informes de Laboratorio
+              SILABIS
             </div>
             <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11 }}>Lab. Inf-Sis · UMSS</div>
           </div>
