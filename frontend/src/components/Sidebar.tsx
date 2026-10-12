@@ -9,7 +9,8 @@ interface SidebarProps {
 const navItems: { label: string; screen: Screen; icon: string }[] = [
   { label: 'Inicio', screen: 'dashboard', icon: 'home' },
   { label: 'Elaborar informe', screen: 'elaborar', icon: 'edit' },
-  { label: 'Informes pasados', screen: 'informes', icon: 'list' },
+  { label: 'Mis informes', screen: 'informes', icon: 'list' },
+  { label: 'Informes de otros auxiliares', screen: 'informes-compartidos', icon: 'list' },
 ];
 
 function Icon({ name }: { name: string }) {

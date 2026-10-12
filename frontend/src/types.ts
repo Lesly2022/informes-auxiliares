@@ -39,11 +39,12 @@ export type Screen =
   | 'login'
 
   // AUXILIAR
-  | 'dashboard'
-  | 'elaborar'
-  | 'informes'
-  | 'visualizar'
-  | 'editar'
+| 'dashboard'
+| 'elaborar'
+| 'informes'
+| 'informes-compartidos'
+| 'visualizar'
+| 'editar'
 
   // ADMINISTRADOR
   | 'admin-dashboard'

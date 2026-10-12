@@ -13,6 +13,33 @@ const obtenerFechaBolivia = (): string => {
 
 const router = Router();
 
+const gruposCargos: string[][] = [
+  [
+    'Administrador de Lab. de Cómputo',
+    'Auxiliar de Terminal de Cómputo',
+  ],
+  [
+    'Administrador de Lab. de Desarrollo',
+    'Auxiliar de Lab. de Desarrollo',
+  ],
+  [
+    'Administrador de Lab. de Mantenimiento de Software',
+    'Auxiliar de Lab. de Mantenimiento de Software',
+  ],
+  [
+    'Administrador de Lab. de Mantenimiento de Hardware',
+    'Auxiliar de Lab. de Mantenimiento de Hardware',
+  ],
+];
+
+const obtenerCargosDelGrupo = (cargo: string): string[] => {
+  const grupo = gruposCargos.find((cargos) =>
+    cargos.includes(cargo)
+  );
+
+  return grupo ?? [cargo];
+};
+
 router.get('/', verificarToken, async (req: AuthRequest, res) => {
   try {
     const usuarioId = req.usuario?.usuarioId;
@@ -35,7 +62,9 @@ router.get('/', verificarToken, async (req: AuthRequest, res) => {
     const informes = await prisma.informe.findMany({
       where: {
         usuario: {
-          cargo: usuarioActual.cargo,
+          cargo: {
+            in: obtenerCargosDelGrupo(usuarioActual.cargo),
+          },
         },
       },
       orderBy: {
@@ -117,7 +146,9 @@ router.get('/:id', verificarToken, async (req: AuthRequest, res) => {
       where: {
         id,
         usuario: {
-          cargo: usuarioActual.cargo,
+          cargo: {
+            in: obtenerCargosDelGrupo(usuarioActual.cargo),
+          },
         },
       },
       include: {

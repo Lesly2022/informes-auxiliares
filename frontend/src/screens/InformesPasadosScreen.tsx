@@ -42,7 +42,12 @@ export default function InformesPasadosScreen({
         setError('');
 
         const data = await obtenerInformes();
-        setReports(data);
+
+        const misInformes = data.filter(
+          (informe) => informe.usuarioId === usuarioIdActual
+        );
+
+        setReports(misInformes);
       } catch (error) {
         if (error instanceof Error) {
           setError(error.message);

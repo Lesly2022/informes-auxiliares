@@ -38,12 +38,31 @@ export default function AdminInformesScreen({
   onNavigate,
   onLogout,
 }: Props) {
-  const [dia, setDia] = useState('');
-  const [mes, setMes] = useState('');
-  const [anio, setAnio] = useState('');
-  const [auxiliarId, setAuxiliarId] = useState('');
+  const [dia, setDia] = useState(
+    () => sessionStorage.getItem('adminFiltroDia') || ''
+  );
+
+  const [mes, setMes] = useState(
+    () => sessionStorage.getItem('adminFiltroMes') || ''
+  );
+
+  const [anio, setAnio] = useState(
+    () => sessionStorage.getItem('adminFiltroAnio') || ''
+  );
+
+  const [auxiliarId, setAuxiliarId] = useState(
+    () => sessionStorage.getItem('adminFiltroAuxiliar') || ''
+  );
+
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
+
+  useEffect(() => {
+    sessionStorage.setItem('adminFiltroDia', dia);
+    sessionStorage.setItem('adminFiltroMes', mes);
+    sessionStorage.setItem('adminFiltroAnio', anio);
+    sessionStorage.setItem('adminFiltroAuxiliar', auxiliarId);
+  }, [dia, mes, anio, auxiliarId]);
 
   const [informes, setInformes] = useState<AdminInformeResumen[]>([]);
   const [auxiliares, setAuxiliares] = useState<AdminAuxiliar[]>([]);

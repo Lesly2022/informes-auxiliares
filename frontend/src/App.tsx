@@ -5,6 +5,7 @@ import LoginScreen from './screens/LoginScreen';
 import DashboardScreen from './screens/DashboardScreen';
 import InformeFormScreen from './screens/InformeFormScreen';
 import InformesPasadosScreen from './screens/InformesPasadosScreen';
+import InformesCompartidosScreen from './screens/InformesCompartidosScreen';
 import VisualizarInformeScreen from './screens/VisualizarInformeScreen';
 
 import AdminMateriasScreen from './screens/admin/AdminMateriasScreen';
@@ -188,7 +189,15 @@ useEffect(() => {
 
     case 'informes':
       return (
-        <InformesPasadosScreen
+            <InformesPasadosScreen
+              onNavigate={navigate}
+              onLogout={handleLogout}
+            />
+          );
+
+        case 'informes-compartidos':
+      return (
+        <InformesCompartidosScreen
           onNavigate={navigate}
           onLogout={handleLogout}
         />
