@@ -200,7 +200,7 @@ const [fecha, setFecha] = useState(obtenerFechaBolivia);
   const [saved, setSaved] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [errorGuardado, setErrorGuardado] = useState('');
-  const [nombreUsuario, setNombreUsuario] = useState(USUARIO.nombre);
+  const [nombreUsuario, setNombreUsuario] = useState('');
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [cargandoEdicion, setCargandoEdicion] = useState(false);
   const [salas, setSalas] = useState<Sala[]>([]);
@@ -589,6 +589,14 @@ useEffect(() => {
       Eliminar
     </button>
   );
+  
+    if (!perfil && !isEdit) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p>Cargando información del auxiliar...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex" style={{ minHeight: '100vh' }}>
