@@ -91,21 +91,24 @@ export default function LoginScreen({ onLogin }: Props) {
           }}
         >
           <div
-            className="rounded-xl overflow-hidden mb-4"
+            className="mb-1 flex items-center justify-center rounded-2xl overflow-hidden"
             style={{
-              width: 72,
-              height: 72,
-              backgroundColor: 'white',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.12)',
+              width: 120,
+              height: 100,
+              backgroundColor: '#ffffff',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
             }}
           >
             <img
-              src="/logo-informes.jpeg"
-              alt="Logo SILABIS"
+              src="/silabis-animado.gif"
+              alt="Isotipo animado de SILABIS"
               style={{
                 width: '100%',
                 height: '100%',
                 objectFit: 'cover',
+                objectPosition: 'center',
+                transform: 'scale(1.6)',
+                translate: '0 15px',
               }}
             />
           </div>
